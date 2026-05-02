@@ -1,34 +1,60 @@
 export class Hud {
+  private wrap: HTMLDivElement;
   private elapsedEl: HTMLDivElement;
-  private breakdownEl: HTMLDivElement;
-  private labelEl: HTMLDivElement;
-  private debugEl: HTMLDivElement;
+  private subEl: HTMLDivElement;
+  private legendEl: HTMLDivElement;
+  private hintEl: HTMLDivElement;
+  private hintTimer: number | null = null;
 
   constructor(parent: HTMLElement) {
-    const wrap = document.createElement('div');
-    wrap.className = 'hud';
-    parent.appendChild(wrap);
+    this.wrap = document.createElement('div');
+    this.wrap.className = 'hud';
+    parent.appendChild(this.wrap);
 
     this.elapsedEl = document.createElement('div');
-    wrap.appendChild(this.elapsedEl);
+    this.elapsedEl.className = 'hud-time';
+    this.wrap.appendChild(this.elapsedEl);
 
-    this.breakdownEl = document.createElement('div');
-    this.breakdownEl.className = 'hud-sub';
-    wrap.appendChild(this.breakdownEl);
+    this.subEl = document.createElement('div');
+    this.subEl.className = 'hud-sub';
+    this.wrap.appendChild(this.subEl);
 
-    this.labelEl = document.createElement('div');
-    this.labelEl.className = 'hud-sub';
-    wrap.appendChild(this.labelEl);
-    this.labelEl.innerHTML =
-      '<span style="color:#fff5d0">●</span> 秒 (中心軸)　' +
-      '<span style="color:#b48b5a">●</span> 分 (中層)　' +
-      '<span style="color:#f2c879">●</span> 時 (外層)　│　1日で反転';
+    this.legendEl = document.createElement('div');
+    this.legendEl.className = 'hud-legend';
+    this.legendEl.innerHTML =
+      '<span class="dot dot-sec"></span>秒' +
+      '<span class="dot dot-min"></span>分' +
+      '<span class="dot dot-hour"></span>時' +
+      '<span class="legend-meta">1日で反転</span>';
+    this.wrap.appendChild(this.legendEl);
 
-    this.debugEl = document.createElement('div');
-    this.debugEl.className = 'hud-debug';
-    wrap.appendChild(this.debugEl);
-    this.debugEl.innerHTML =
-      'debug: <kbd>Space</kbd> freeze · <kbd>→</kbd> +1m / <kbd>→→</kbd> +10m / <kbd>→→→</kbd> +1h';
+    this.hintEl = document.createElement('div');
+    this.hintEl.className = 'hud-hint';
+    this.hintEl.innerHTML =
+      '<kbd>drag</kbd> 視点回転 ・ <kbd>Space</kbd> 一時停止 ・ ' +
+      '<kbd>→</kbd> +1分 / +10分 / +1時';
+    parent.appendChild(this.hintEl);
+
+    // 起動時のフェードイン (style.css 側で初期 opacity:0 + fade-in アニメ)
+    requestAnimationFrame(() => {
+      this.wrap.classList.add('hud-on');
+      this.hintEl.classList.add('hud-on');
+    });
+
+    // ヒントは 6 秒後にフェードアウト。マウスを動かすとリセットして再表示。
+    this.scheduleHintHide();
+    window.addEventListener('pointermove', () => this.bumpHint(), { passive: true });
+    window.addEventListener('keydown', () => this.bumpHint(), { passive: true });
+  }
+
+  private scheduleHintHide(): void {
+    if (this.hintTimer !== null) window.clearTimeout(this.hintTimer);
+    this.hintTimer = window.setTimeout(() => this.hintEl.classList.add('hud-fade'), 6000);
+  }
+
+  private bumpHint(): void {
+    this.hintEl.classList.remove('hud-fade');
+    this.scheduleHintHide();
   }
 
   update(virtualSec: number, speed: number, frozen: boolean): void {
@@ -36,10 +62,18 @@ export class Hud {
     const min = Math.floor(virtualSec / 60) % 60;
     const hour = Math.floor(virtualSec / 3600) % 24;
     const day = Math.floor(virtualSec / 86400);
-    const status = frozen ? '  ⏸ FROZEN' : '';
-    this.elapsedEl.textContent = `virtual ${day}d ${pad(hour)}:${pad(min)}:${pad(sec)}　×${speed}${status}`;
+
+    // 大きい主表示: 経過時間
+    this.elapsedEl.innerHTML =
+      `<span class="d">${day}</span><span class="u">d</span> ` +
+      `<span class="d">${pad(hour)}</span><span class="sep">:</span>` +
+      `<span class="d">${pad(min)}</span><span class="sep">:</span>` +
+      `<span class="d">${pad(sec)}</span>`;
     this.elapsedEl.classList.toggle('hud-frozen', frozen);
-    this.breakdownEl.textContent = `sec ${sec}/60　min ${min}/60　hour ${hour}/24　day ${day}`;
+
+    // サブ: 速度倍率と FROZEN マーク
+    const speedTxt = speed === 1 ? '実時間' : `×${speed}`;
+    this.subEl.textContent = frozen ? `${speedTxt}  ⏸ FROZEN` : speedTxt;
   }
 }
 

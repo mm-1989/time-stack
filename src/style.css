@@ -9,8 +9,8 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0a0e1a;
-  font-family: system-ui, -apple-system, sans-serif;
+  background: #05060c;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: #e4e7ee;
 }
 
@@ -21,42 +21,144 @@ body {
 
 canvas {
   display: block;
+  cursor: grab;
+}
+canvas:active {
+  cursor: grabbing;
 }
 
+/* ---------- HUD: 左上の主表示 ---------- */
 .hud {
   position: fixed;
-  top: 16px;
-  left: 16px;
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  color: #9ca3af;
+  top: 28px;
+  left: 28px;
   pointer-events: none;
   user-select: none;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 1.2s ease 0.4s, transform 1.2s ease 0.4s;
+}
+.hud.hud-on {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hud-time {
+  font: 500 30px/1 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
+  color: #f1f4fa;
+  text-shadow: 0 1px 16px rgba(0, 0, 0, 0.6);
+}
+.hud-time .d {
+  font-variant-numeric: tabular-nums;
+}
+.hud-time .u {
+  font-size: 0.55em;
+  color: #8a93a8;
+  margin-left: 2px;
+  margin-right: 6px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.hud-time .sep {
+  color: #5a6378;
+  margin: 0 2px;
+}
+.hud-time.hud-frozen {
+  color: #f4b066;
 }
 
 .hud-sub {
-  margin-top: 6px;
-  font-size: 11px;
-  opacity: 0.85;
+  margin-top: 10px;
+  font: 400 12px/1.4 ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7a8398;
 }
 
-.hud-frozen {
-  color: #f4a261;
+.hud-legend {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 400 11px/1 ui-monospace, monospace;
+  letter-spacing: 0.1em;
+  color: #99a3b8;
 }
-
-.hud-debug {
-  margin-top: 12px;
-  font-size: 10px;
-  opacity: 0.55;
-}
-
-.hud-debug kbd {
+.hud-legend .dot {
   display: inline-block;
-  padding: 1px 5px;
-  border: 1px solid #555;
-  border-radius: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: -1px;
+  box-shadow: 0 0 10px currentColor;
+}
+.hud-legend .dot-sec {
+  background: #fff5d0;
+  color: #fff5d0;
+}
+.hud-legend .dot-min {
+  background: #b48b5a;
+  color: #b48b5a;
+}
+.hud-legend .dot-hour {
+  background: #f2c879;
+  color: #f2c879;
+}
+.hud-legend .legend-meta {
+  margin-left: 4px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  color: #6a7388;
+}
+
+/* ---------- HUD: 下部のヒント ---------- */
+.hud-hint {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  user-select: none;
+  font: 400 11px/1 ui-monospace, monospace;
+  letter-spacing: 0.1em;
+  color: #6a7388;
+  background: rgba(8, 12, 22, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 10px 18px;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  opacity: 0;
+  transition: opacity 1.2s ease 1.2s, transform 1.2s ease 1.2s;
+  white-space: nowrap;
+}
+.hud-hint.hud-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.hud-hint.hud-fade {
+  opacity: 0;
+  transition: opacity 2.5s ease;
+}
+.hud-hint kbd {
+  display: inline-block;
+  padding: 2px 7px;
+  margin: 0 2px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #c0c8d8;
   font-family: inherit;
   font-size: 10px;
-  background: rgba(255, 255, 255, 0.04);
+  letter-spacing: 0.04em;
+}
+
+/* prefers-reduced-motion: アニメは即時に */
+@media (prefers-reduced-motion: reduce) {
+  .hud,
+  .hud-hint {
+    transition: none;
+  }
 }
