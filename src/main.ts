@@ -28,7 +28,7 @@ const slots = [-1.5, -0.5, 0.5, 1.5].map((m) => m * SLOT_WIDTH);
 
 const seconds = new Stack({
   capacity: 60,
-  cols: 6,
+  cols: 8,
   cellSize: 0.16,
   spacing: 0.19,
   color: 0x4a90e2,
