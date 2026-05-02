@@ -113,14 +113,19 @@ export class Hourglass {
       new THREE.Vector2(Rmax * 1.0, H * 0.97),
       new THREE.Vector2(Rmax * 0.85, H),
     ];
-    const envelopeGeom = new THREE.LatheGeometry(profile, 64);
-    const envelopeMat = new THREE.MeshStandardMaterial({
-      color: 0xb8d4f0,
-      transparent: true,
-      opacity: 0.13,
+    const envelopeGeom = new THREE.LatheGeometry(profile, 96);
+    const envelopeMat = new THREE.MeshPhysicalMaterial({
+      color: 0xc8dcf0,
       side: THREE.DoubleSide,
       roughness: 0.05,
       metalness: 0.0,
+      transmission: 0.92,
+      thickness: 0.4,
+      ior: 1.45,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.04,
+      attenuationColor: 0xa0c0e0,
+      attenuationDistance: 2.5,
       depthWrite: false,
     });
     const envelope = new THREE.Mesh(envelopeGeom, envelopeMat);
@@ -128,9 +133,9 @@ export class Hourglass {
 
     // ---------- フレーム Torus (上端 / 腰 / 下端) ----------
     const frameMat = new THREE.MeshStandardMaterial({
-      color: 0x7a92b4,
-      roughness: 0.4,
-      metalness: 0.2,
+      color: 0x9aaccc,
+      roughness: 0.22,
+      metalness: 0.75,
     });
     const addFrame = (radius: number, y: number) => {
       const t = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.025, 8, 48), frameMat);
@@ -148,26 +153,28 @@ export class Hourglass {
     this.group.add(this.waistLight);
 
     // ---------- 3 シェル × 上下 = 6 Stack ----------
+    // 粒は emissive を baseline 0.06 に保ち、bloom で常時うっすら glow させる
+    // (静止画でも「光る素材」として読み取らせる)
     this.secMat = new THREE.MeshStandardMaterial({
       color: SEC_COLOR,
       emissive: SEC_COLOR,
-      emissiveIntensity: 0,
-      roughness: 0.4,
+      emissiveIntensity: 0.08,
+      roughness: 0.32,
       metalness: 0.0,
     });
     this.minMat = new THREE.MeshStandardMaterial({
       color: MIN_COLOR,
       emissive: MIN_COLOR,
-      emissiveIntensity: 0,
-      roughness: 0.5,
-      metalness: 0.05,
+      emissiveIntensity: 0.06,
+      roughness: 0.42,
+      metalness: 0.1,
     });
     this.hourMat = new THREE.MeshStandardMaterial({
       color: HOUR_COLOR,
       emissive: HOUR_COLOR,
-      emissiveIntensity: 0,
-      roughness: 0.5,
-      metalness: 0.05,
+      emissiveIntensity: 0.06,
+      roughness: 0.42,
+      metalness: 0.1,
     });
 
     const secGeom = new THREE.SphereGeometry(0.022, 8, 8);
@@ -280,8 +287,13 @@ export class Hourglass {
       peakByMat.set(p.mat, Math.max(peakByMat.get(p.mat) ?? 0, v));
       return true;
     });
+    const baseEmissive: ReadonlyMap<THREE.MeshStandardMaterial, number> = new Map([
+      [this.secMat, 0.08],
+      [this.minMat, 0.06],
+      [this.hourMat, 0.06],
+    ]);
     for (const mat of [this.secMat, this.minMat, this.hourMat]) {
-      mat.emissiveIntensity = peakByMat.get(mat) ?? 0;
+      mat.emissiveIntensity = (baseEmissive.get(mat) ?? 0) + (peakByMat.get(mat) ?? 0);
     }
 
     const ampByShell = new Map<THREE.Group, number>();
