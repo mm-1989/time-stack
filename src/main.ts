@@ -31,7 +31,7 @@ const ROW_Y_HEX = -1.4;
 
 const COLOR_C60 = 0x4a90e2;
 const COLOR_HEX = 0xe07a5f;
-const DAY_CAP = 7; // 1 週間で day タワー上限。Phase 2 では 7 日見せれば十分
+const DAY_CAP = 7;
 
 const c60Stacks = {
   sec: new Stack({ positions: c60Layout(0.45), cellSize: 0.08, color: COLOR_C60, origin: new THREE.Vector3(COL_X[0], ROW_Y_C60, 0) }),
@@ -51,10 +51,36 @@ const hexStacks = {
 
 const hud = new Hud(document.body);
 
-// 速度倍率: ?speed=N で指定。デフォルト 60(1 実秒 = 1 仮想分)。
 const speed = Math.max(0.1, parseFloat(new URL(location.href).searchParams.get('speed') ?? '60'));
 
-const startTime = performance.now();
+let virtualMs = 0;
+let lastFrameNow = performance.now();
+let frozen = false;
+
+// 連続押し判定: 300ms 以内の押下回数で 1m / 10m / 1h を切り替え
+const SKIP_WINDOW_MS = 300;
+let skipCount = 0;
+let skipTimer: number | null = null;
+
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    frozen = !frozen;
+    return;
+  }
+  if (e.code === 'ArrowRight') {
+    e.preventDefault();
+    skipCount++;
+    if (skipTimer !== null) window.clearTimeout(skipTimer);
+    skipTimer = window.setTimeout(() => {
+      const addSec = skipCount === 1 ? 60 : skipCount === 2 ? 600 : 3600;
+      virtualMs += addSec * 1000;
+      skipCount = 0;
+      skipTimer = null;
+    }, SKIP_WINDOW_MS);
+    return;
+  }
+});
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -68,7 +94,11 @@ function syncStack(stack: Stack, target: number, now: number): void {
 }
 
 function tick(now: number) {
-  const virtualSec = Math.floor(((now - startTime) * speed) / 1000);
+  const delta = now - lastFrameNow;
+  lastFrameNow = now;
+  if (!frozen) virtualMs += delta * speed;
+
+  const virtualSec = Math.floor(virtualMs / 1000);
   const sec = virtualSec % 60;
   const min = Math.floor(virtualSec / 60) % 60;
   const hour = Math.floor(virtualSec / 3600) % 24;
@@ -86,7 +116,7 @@ function tick(now: number) {
   Object.values(c60Stacks).forEach((s) => s.update(now));
   Object.values(hexStacks).forEach((s) => s.update(now));
 
-  hud.update(virtualSec, speed);
+  hud.update(virtualSec, speed, frozen);
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }

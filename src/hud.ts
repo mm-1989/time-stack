@@ -2,6 +2,7 @@ export class Hud {
   private elapsedEl: HTMLDivElement;
   private breakdownEl: HTMLDivElement;
   private labelEl: HTMLDivElement;
+  private debugEl: HTMLDivElement;
 
   constructor(parent: HTMLElement) {
     const wrap = document.createElement('div');
@@ -20,14 +21,22 @@ export class Hud {
     wrap.appendChild(this.labelEl);
     this.labelEl.innerHTML =
       '<span style="color:#7ab1ec">●</span> C60 (上)　<span style="color:#e8a08a">●</span> Hex (下)　│　左から sec / min / hour / day';
+
+    this.debugEl = document.createElement('div');
+    this.debugEl.className = 'hud-debug';
+    wrap.appendChild(this.debugEl);
+    this.debugEl.innerHTML =
+      'debug: <kbd>Space</kbd> freeze · <kbd>→</kbd> +1m / <kbd>→→</kbd> +10m / <kbd>→→→</kbd> +1h';
   }
 
-  update(virtualSec: number, speed: number): void {
+  update(virtualSec: number, speed: number, frozen: boolean): void {
     const sec = virtualSec % 60;
     const min = Math.floor(virtualSec / 60) % 60;
     const hour = Math.floor(virtualSec / 3600) % 24;
     const day = Math.floor(virtualSec / 86400);
-    this.elapsedEl.textContent = `virtual ${day}d ${pad(hour)}:${pad(min)}:${pad(sec)}　×${speed}`;
+    const status = frozen ? '  ⏸ FROZEN' : '';
+    this.elapsedEl.textContent = `virtual ${day}d ${pad(hour)}:${pad(min)}:${pad(sec)}　×${speed}${status}`;
+    this.elapsedEl.classList.toggle('hud-frozen', frozen);
     this.breakdownEl.textContent = `sec ${sec}/60　min ${min}/60　hour ${hour}/24　day ${day}`;
   }
 }
