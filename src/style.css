@@ -22,3 +22,15 @@ body {
 canvas {
   display: block;
 }
+
+.hud {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  pointer-events: none;
+  user-select: none;
+}
