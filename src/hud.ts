@@ -1,10 +1,22 @@
 export class Hud {
-  private el: HTMLDivElement;
+  private elapsedEl: HTMLDivElement;
+  private labelEl: HTMLDivElement;
 
   constructor(parent: HTMLElement) {
-    this.el = document.createElement('div');
-    this.el.className = 'hud';
-    parent.appendChild(this.el);
+    const wrap = document.createElement('div');
+    wrap.className = 'hud';
+    parent.appendChild(wrap);
+
+    this.elapsedEl = document.createElement('div');
+    wrap.appendChild(this.elapsedEl);
+
+    this.labelEl = document.createElement('div');
+    this.labelEl.className = 'hud-sub';
+    wrap.appendChild(this.labelEl);
+  }
+
+  setLabel(html: string): void {
+    this.labelEl.innerHTML = html;
   }
 
   update(elapsedMs: number): void {
@@ -12,6 +24,6 @@ export class Hud {
     const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
     const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
     const ss = String(totalSec % 60).padStart(2, '0');
-    this.el.textContent = `elapsed  ${hh}:${mm}:${ss}`;
+    this.elapsedEl.textContent = `elapsed  ${hh}:${mm}:${ss}`;
   }
 }

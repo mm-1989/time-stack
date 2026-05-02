@@ -1,12 +1,10 @@
 import * as THREE from 'three';
 
 export interface StackOptions {
-  capacity: number;
-  cols: number;
+  positions: THREE.Vector3[];
   cellSize: number;
-  spacing: number;
   color: number;
-  position: THREE.Vector3;
+  origin: THREE.Vector3;
 }
 
 interface SpawnedBox {
@@ -32,7 +30,7 @@ export class Stack {
   constructor(opts: StackOptions) {
     this.opts = opts;
     this.group = new THREE.Group();
-    this.group.position.copy(opts.position);
+    this.group.position.copy(opts.origin);
     this.geometry = new THREE.BoxGeometry(opts.cellSize, opts.cellSize, opts.cellSize);
     this.material = new THREE.MeshStandardMaterial({
       color: opts.color,
@@ -45,22 +43,22 @@ export class Stack {
     return this.boxes.length;
   }
 
-  add(now: number): void {
-    if (this.boxes.length >= this.opts.capacity) return;
+  get capacity(): number {
+    return this.opts.positions.length;
+  }
 
-    const index = this.boxes.length;
+  add(now: number): void {
+    if (this.boxes.length >= this.capacity) return;
+    const idx = this.boxes.length;
     const mesh = new THREE.Mesh(this.geometry, this.material);
-    const { x, y, z } = this.cellPosition(index);
-    mesh.position.set(x, y, z);
+    mesh.position.copy(this.opts.positions[idx]);
     mesh.scale.setScalar(0.001);
     this.group.add(mesh);
     this.boxes.push({ mesh, spawnedAt: now });
   }
 
   clear(): void {
-    for (const { mesh } of this.boxes) {
-      this.group.remove(mesh);
-    }
+    for (const { mesh } of this.boxes) this.group.remove(mesh);
     this.boxes = [];
   }
 
@@ -74,15 +72,5 @@ export class Stack {
       const t = elapsed / POP_DURATION_MS;
       mesh.scale.setScalar(easeOutBack(t));
     }
-  }
-
-  private cellPosition(index: number): { x: number; y: number; z: number } {
-    const { cols, spacing } = this.opts;
-    const rowsPerCol = Math.ceil(this.opts.capacity / cols);
-    const col = Math.floor(index / rowsPerCol);
-    const row = index % rowsPerCol;
-    const x = (col - (cols - 1) / 2) * spacing;
-    const y = row * spacing + spacing / 2;
-    return { x, y, z: 0 };
   }
 }

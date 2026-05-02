@@ -30,7 +30,13 @@ canvas {
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   font-size: 13px;
   letter-spacing: 0.06em;
-  color: #6b7280;
+  color: #9ca3af;
   pointer-events: none;
   user-select: none;
+}
+
+.hud-sub {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.85;
 }
