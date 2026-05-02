@@ -153,26 +153,26 @@ export class Hourglass {
     this.group.add(this.waistLight);
 
     // ---------- 3 シェル × 上下 = 6 Stack ----------
-    // 粒は emissive を baseline 0.06 に保ち、bloom で常時うっすら glow させる
-    // (静止画でも「光る素材」として読み取らせる)
+    // 粒の baseline emissive は最小限。常時 bloom させずに、イベント時の
+    // pulse だけが光る = 「事件が起きた瞬間だけ世界が反応する」演出。
     this.secMat = new THREE.MeshStandardMaterial({
       color: SEC_COLOR,
       emissive: SEC_COLOR,
-      emissiveIntensity: 0.08,
+      emissiveIntensity: 0.02,
       roughness: 0.32,
       metalness: 0.0,
     });
     this.minMat = new THREE.MeshStandardMaterial({
       color: MIN_COLOR,
       emissive: MIN_COLOR,
-      emissiveIntensity: 0.06,
+      emissiveIntensity: 0.015,
       roughness: 0.42,
       metalness: 0.1,
     });
     this.hourMat = new THREE.MeshStandardMaterial({
       color: HOUR_COLOR,
       emissive: HOUR_COLOR,
-      emissiveIntensity: 0.06,
+      emissiveIntensity: 0.015,
       roughness: 0.42,
       metalness: 0.1,
     });
@@ -288,9 +288,9 @@ export class Hourglass {
       return true;
     });
     const baseEmissive: ReadonlyMap<THREE.MeshStandardMaterial, number> = new Map([
-      [this.secMat, 0.08],
-      [this.minMat, 0.06],
-      [this.hourMat, 0.06],
+      [this.secMat, 0.02],
+      [this.minMat, 0.015],
+      [this.hourMat, 0.015],
     ]);
     for (const mat of [this.secMat, this.minMat, this.hourMat]) {
       mat.emissiveIntensity = (baseEmissive.get(mat) ?? 0) + (peakByMat.get(mat) ?? 0);

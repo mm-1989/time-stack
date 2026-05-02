@@ -39,21 +39,22 @@ app.appendChild(renderer.domElement);
 const background = new Background();
 scene.add(background.mesh);
 
-// reduced-motion ではダストを大幅減 + 動かさない、モバイルでは個数半減
-const dustCount = reducedMotion ? 80 : isMobile ? 180 : 360;
+// ダストは大幅減らして「世界の主役は砂時計」と読み取らせる
+const dustCount = reducedMotion ? 40 : isMobile ? 90 : 160;
 const dust = new Dust(dustCount);
 scene.add(dust.points);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.42));
-const keyLight = new THREE.DirectionalLight(0xfff0d8, 0.85);
+// 環境光は最低限。砂時計を黒の中に浮かばせるためのコントラスト重視。
+scene.add(new THREE.AmbientLight(0xffffff, 0.16));
+const keyLight = new THREE.DirectionalLight(0xfff0d8, 1.1);
 keyLight.position.set(3, 6, 4);
 scene.add(keyLight);
-// リムライト: 後方斜め下から、シルエットを浮き立たせる冷たい光
-const rimLight = new THREE.DirectionalLight(0x6a90c8, 0.55);
+// リムライト: 背面斜め下から、シルエットを浮き立たせる冷たい光 (強化)
+const rimLight = new THREE.DirectionalLight(0x6a90c8, 1.0);
 rimLight.position.set(-2, -1.5, -3);
 scene.add(rimLight);
-// フィルライト: 反対側から弱く
-const fillLight = new THREE.DirectionalLight(0xb0c8e0, 0.18);
+// フィルライト: 反対側からごく弱く (影の沈み込みのみ防止)
+const fillLight = new THREE.DirectionalLight(0xb0c8e0, 0.08);
 fillLight.position.set(-3, 2, 4);
 scene.add(fillLight);
 

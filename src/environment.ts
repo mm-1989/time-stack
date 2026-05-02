@@ -9,16 +9,17 @@ interface DayPalette {
   bot: number;
 }
 
-// 6 つのアンカー時間帯。間は HSL 補間ではなく RGB lerp (色相ジャンプ回避)。
+// 6 つのアンカー時間帯。全体に大幅減光し、砂時計を主役にするための地。
+// 色相は残しつつ明度を 60〜70% カット。
 const PALETTE: { hour: number; pal: DayPalette }[] = [
-  { hour: 0, pal: { top: 0x0a0f1c, bot: 0x000004 } }, // 深夜
-  { hour: 5, pal: { top: 0x1a2845, bot: 0x06080f } }, // 夜明け前
-  { hour: 7, pal: { top: 0x3a4870, bot: 0x141828 } }, // 朝
-  { hour: 12, pal: { top: 0x4a5870, bot: 0x1a1e28 } }, // 真昼
-  { hour: 17, pal: { top: 0x4a3050, bot: 0x180818 } }, // 夕方
-  { hour: 19, pal: { top: 0x281024, bot: 0x08040a } }, // 夕暮れ
-  { hour: 22, pal: { top: 0x0e1426, bot: 0x020208 } }, // 夜
-  { hour: 24, pal: { top: 0x0a0f1c, bot: 0x000004 } }, // = hour 0
+  { hour: 0, pal: { top: 0x040610, bot: 0x000002 } }, // 深夜
+  { hour: 5, pal: { top: 0x0a1224, bot: 0x020308 } }, // 夜明け前
+  { hour: 7, pal: { top: 0x16203c, bot: 0x080a14 } }, // 朝
+  { hour: 12, pal: { top: 0x1c2638, bot: 0x0a0c14 } }, // 真昼
+  { hour: 17, pal: { top: 0x22162c, bot: 0x0a040c } }, // 夕方
+  { hour: 19, pal: { top: 0x140818, bot: 0x040206 } }, // 夕暮れ
+  { hour: 22, pal: { top: 0x060a14, bot: 0x010104 } }, // 夜
+  { hour: 24, pal: { top: 0x040610, bot: 0x000002 } }, // = hour 0
 ];
 
 function lerpColorHex(a: number, b: number, t: number): THREE.Color {
@@ -71,12 +72,13 @@ export class Background {
         uniform vec3 uColorBot;
         varying vec2 vUv;
         void main() {
-          // ベースは縦方向の線形補間 + わずかなビネット (中央が少し暗い)
+          // 縦方向の線形補間
           float vy = smoothstep(0.0, 1.0, vUv.y);
           vec3 col = mix(uColorBot, uColorTop, vy);
-          // 軽い radial 暗化 (中央 0.85 倍, 周辺 1.0)
+          // 強めの radial 暗化: 中央を黒く落として砂時計を浮き立たせる
+          // (砂時計の輪郭付近で 0.35 倍、画面端で 1.0 倍)
           float r = distance(vUv, vec2(0.5));
-          col *= mix(0.85, 1.0, smoothstep(0.0, 0.7, r));
+          col *= mix(0.35, 1.0, smoothstep(0.18, 0.85, r));
           gl_FragColor = vec4(col, 1.0);
         }
       `,
@@ -129,10 +131,10 @@ export class Dust {
     geom.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
 
     const mat = new THREE.PointsMaterial({
-      color: 0xffe8c0,
-      size: 0.022,
+      color: 0xc8b890,
+      size: 0.014,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.22,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       sizeAttenuation: true,

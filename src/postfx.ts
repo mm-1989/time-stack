@@ -23,19 +23,20 @@ export function createPostFx(
   const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
 
-  // 強い bloom: emissive の粒・フラッシュ・腰ライトを発光体として強調
+  // 選択的 bloom: イベント時の emissive ピークだけを光らせる。threshold を上げて
+  // baseline の中輝度が常時光るのを止め、minute/hour/flip の瞬間だけ世界が反応する。
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.85, // strength
-    0.6, // radius
-    0.18, // threshold (低めで多くの中輝度が拾われる)
+    0.55, // strength (was 0.85)
+    0.5, // radius
+    0.55, // threshold (was 0.18 — 大幅 up で常時 bloom を抑制)
   );
   composer.addPass(bloom);
 
-  // Vignette: 周辺減光で視線を中央へ誘導
+  // Vignette: 周辺減光を強めて視線を中央の砂時計に集中させる
   const vignettePass = new ShaderPass(VignetteShader);
-  vignettePass.uniforms.offset.value = 0.95;
-  vignettePass.uniforms.darkness.value = 1.4;
+  vignettePass.uniforms.offset.value = 0.85;
+  vignettePass.uniforms.darkness.value = 1.85;
   composer.addPass(vignettePass);
 
   // FXAA: 微細エッジのジャギー除去
