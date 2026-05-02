@@ -51,7 +51,8 @@ const hexStacks = {
 
 const hud = new Hud(document.body);
 
-const speed = Math.max(0.1, parseFloat(new URL(location.href).searchParams.get('speed') ?? '60'));
+// デフォルトは実時間 (speed=1)。高速比較したい時は ?speed=60 等で URL から上書き可能。
+const speed = Math.max(0.1, parseFloat(new URL(location.href).searchParams.get('speed') ?? '1'));
 
 let virtualMs = 0;
 let lastFrameNow = performance.now();
