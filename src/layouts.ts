@@ -1,8 +1,6 @@
 import * as THREE from 'three';
 
 // 切頂二十面体(C60 / Buckminsterfullerene)の頂点 60 個。
-// 黄金比 φ を使った 3 群の座標式:(0, ±1, ±3φ), (±1, ±(2+φ), ±2φ), (±φ, ±2, ±(1+2φ))
-// 各群を円順列(cyclic permutation)で 3 通りに並べ替えて合計 60 頂点を生成。
 export function c60Layout(targetRadius: number): THREE.Vector3[] {
   const phi = (1 + Math.sqrt(5)) / 2;
   const baseGroups: Array<[number, number, number]> = [
@@ -12,7 +10,6 @@ export function c60Layout(targetRadius: number): THREE.Vector3[] {
   ];
 
   const seen = new Map<string, THREE.Vector3>();
-
   for (const base of baseGroups) {
     for (let perm = 0; perm < 3; perm++) {
       const sgn = (n: number) => (n === 0 ? [1] : [-1, 1]);
@@ -38,25 +35,36 @@ export function c60Layout(targetRadius: number): THREE.Vector3[] {
   const vertices = Array.from(seen.values());
   const naturalRadius = vertices[0].length();
   vertices.forEach((v) => v.multiplyScalar(targetRadius / naturalRadius));
-
-  // 下から上へ螺旋状に出現させるため (y, theta) でソート
   vertices.sort((a, b) => {
     if (Math.abs(a.y - b.y) > 0.001) return a.y - b.y;
     return Math.atan2(a.z, a.x) - Math.atan2(b.z, b.x);
   });
-
-  // 球の底を y=0 に揃える
   vertices.forEach((v) => (v.y += targetRadius));
-
   return vertices;
 }
 
-// 同心六角環 4 重(中心なし): 6 + 12 + 18 + 24 = 60 個
-// 内側のリングから外側へ、各リングは 6 角形の周をなぞる
-export function hexRingsLayout(spacing: number): THREE.Vector3[] {
+// 黄金角分布で球面に N 点を均等配置。N=60 以外のスケール(時=24)で使う。
+export function fibonacciSphereLayout(count: number, radius: number): THREE.Vector3[] {
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  const points: THREE.Vector3[] = [];
+  for (let i = 0; i < count; i++) {
+    const y = 1 - (i / Math.max(1, count - 1)) * 2;
+    const r = Math.sqrt(Math.max(0, 1 - y * y));
+    const theta = goldenAngle * i;
+    points.push(new THREE.Vector3(Math.cos(theta) * r * radius, y * radius, Math.sin(theta) * r * radius));
+  }
+  points.sort((a, b) => {
+    if (Math.abs(a.y - b.y) > 0.001) return a.y - b.y;
+    return Math.atan2(a.z, a.x) - Math.atan2(b.z, b.x);
+  });
+  points.forEach((v) => (v.y += radius));
+  return points;
+}
+
+// 同心六角環(中心なし)。capacity を指定すると先頭 N 個でスライス。60=4 環フル / 24=ring1+2+ring3 前半。
+export function hexRingsLayout(spacing: number, capacity = 60): THREE.Vector3[] {
   const vertices: THREE.Vector3[] = [];
   const RINGS = 4;
-
   for (let n = 1; n <= RINGS; n++) {
     for (let side = 0; side < 6; side++) {
       const a0 = (side * Math.PI) / 3;
@@ -71,10 +79,16 @@ export function hexRingsLayout(spacing: number): THREE.Vector3[] {
       }
     }
   }
-
-  // 全体を上にずらして床 y=0 に乗せる
   const outerRadius = RINGS * spacing;
   vertices.forEach((v) => (v.y += outerRadius));
+  return vertices.slice(0, capacity);
+}
 
-  return vertices;
+// 縦方向タワー。day スタック用(1 日 = 1 ボックス、下から積む)。
+export function linearStackLayout(count: number, spacing: number): THREE.Vector3[] {
+  const points: THREE.Vector3[] = [];
+  for (let i = 0; i < count; i++) {
+    points.push(new THREE.Vector3(0, i * spacing + spacing / 2, 0));
+  }
+  return points;
 }
