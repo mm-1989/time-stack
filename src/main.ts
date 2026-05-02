@@ -4,12 +4,12 @@ import { syncStack } from './stack';
 import { Hud } from './hud';
 import { Hourglass } from './hourglass';
 import { createPostFx } from './postfx';
+import { Background, Dust } from './environment';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0e1a);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
 camera.position.set(0, 0, 9);
@@ -23,10 +23,24 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 app.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+const background = new Background();
+scene.add(background.mesh);
+
+const dust = new Dust(360);
+scene.add(dust.points);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.42));
+const keyLight = new THREE.DirectionalLight(0xfff0d8, 0.85);
 keyLight.position.set(3, 6, 4);
 scene.add(keyLight);
+// リムライト: 後方斜め下から、シルエットを浮き立たせる冷たい光
+const rimLight = new THREE.DirectionalLight(0x6a90c8, 0.55);
+rimLight.position.set(-2, -1.5, -3);
+scene.add(rimLight);
+// フィルライト: 反対側から弱く
+const fillLight = new THREE.DirectionalLight(0xb0c8e0, 0.18);
+fillLight.position.set(-3, 2, 4);
+scene.add(fillLight);
 
 const hourglass = new Hourglass({
   origin: new THREE.Vector3(0, 0, 0),
@@ -83,6 +97,7 @@ let initialized = false;
 function tick(now: number) {
   const delta = now - lastFrameNow;
   lastFrameNow = now;
+  const deltaSec = delta * 0.001;
   if (!frozen) virtualMs += delta * speed;
 
   const virtualSec = Math.floor(virtualMs / 1000);
@@ -90,6 +105,7 @@ function tick(now: number) {
   const min = Math.floor(virtualSec / 60) % 60;
   const hour = Math.floor(virtualSec / 3600) % 24;
   const day = Math.floor(virtualSec / 86400);
+  const hourFloat = (virtualMs / 3600000) % 24;
 
   if (initialized && !hourglass.isFlipping) {
     if (day !== prevDay) {
@@ -116,6 +132,10 @@ function tick(now: number) {
     syncStack(hourglass.lowerHour, f ? 24 - hour : hour, now);
   }
   hourglass.update(now);
+
+  background.setTargetHour(hourFloat);
+  background.update(deltaSec);
+  dust.update(deltaSec);
 
   hud.update(virtualSec, speed, frozen);
   postfx.composer.render();
