@@ -20,7 +20,9 @@ export class Hud {
     this.labelEl.className = 'hud-sub';
     wrap.appendChild(this.labelEl);
     this.labelEl.innerHTML =
-      '<span style="color:#7ab1ec">●</span> C60 (上)　<span style="color:#e8a08a">●</span> Hex (下)　│　左から sec / min / hour / day';
+      '<span style="color:#fff5d0">●</span> 秒 (中心軸)　' +
+      '<span style="color:#b48b5a">●</span> 分 (中層)　' +
+      '<span style="color:#f2c879">●</span> 時 (外層)　│　1日で反転';
 
     this.debugEl = document.createElement('div');
     this.debugEl.className = 'hud-debug';

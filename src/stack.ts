@@ -65,3 +65,8 @@ export class Stack {
     }
   }
 }
+
+export function syncStack(stack: Stack, target: number, now: number): void {
+  if (stack.count > target) stack.clear();
+  while (stack.count < target) stack.add(now);
+}
