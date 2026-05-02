@@ -10,6 +10,9 @@ import { CameraRig } from './camera';
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
 
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isMobile = window.matchMedia('(max-width: 640px), (pointer: coarse)').matches;
+
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -17,15 +20,17 @@ camera.position.set(0, 0, 14);
 camera.lookAt(0, 0, 0);
 
 const cameraRig = new CameraRig(camera, {
-  baseRadius: 9,
+  baseRadius: isMobile ? 10.5 : 9,
   introRadius: 14,
-  introDurationMs: 2400,
+  introDurationMs: reducedMotion ? 0 : 2400,
   target: new THREE.Vector3(0, 0, 0),
+  driftScale: reducedMotion ? 0 : 1,
 });
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// モバイルでは DPR 1.5 まで、デスクトップは 2 まで (post-processing 負荷軽減)
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
@@ -34,7 +39,9 @@ app.appendChild(renderer.domElement);
 const background = new Background();
 scene.add(background.mesh);
 
-const dust = new Dust(360);
+// reduced-motion ではダストを大幅減 + 動かさない、モバイルでは個数半減
+const dustCount = reducedMotion ? 80 : isMobile ? 180 : 360;
+const dust = new Dust(dustCount);
 scene.add(dust.points);
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.42));
@@ -59,6 +66,8 @@ const hourglass = new Hourglass({
 scene.add(hourglass.group);
 
 const postfx = createPostFx(renderer, scene, camera);
+// モバイルでは bloom 強度を控えめに (パフォーマンス + 過剰発光の抑制)
+if (isMobile) postfx.bloom.strength = 0.55;
 cameraRig.attachPointer(renderer.domElement);
 
 const hud = new Hud(document.body);
@@ -145,7 +154,7 @@ function tick(now: number) {
 
   background.setTargetHour(hourFloat);
   background.update(deltaSec);
-  dust.update(deltaSec);
+  if (!reducedMotion) dust.update(deltaSec);
   cameraRig.update(now, deltaSec);
 
   hud.update(virtualSec, speed, frozen);

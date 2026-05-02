@@ -11,6 +11,8 @@ export interface CameraRigOptions {
   introRadius: number;
   introDurationMs: number;
   target: THREE.Vector3;
+  /** ドリフト振幅倍率。0 で常時揺らぎ無効 (prefers-reduced-motion 用) */
+  driftScale?: number;
 }
 
 interface FlipPulse {
@@ -77,9 +79,10 @@ export class CameraRig {
     }
     const baseR = this.opts.introRadius + (this.opts.baseRadius - this.opts.introRadius) * introT;
 
-    // 常時ドリフト (sin)
-    const driftTheta = Math.sin(t * 0.00018) * 0.18;
-    const driftPhi = Math.sin(t * 0.00026 + 1.0) * 0.06;
+    // 常時ドリフト (sin)。reduced-motion 時は driftScale=0 で停止。
+    const ds = this.opts.driftScale ?? 1;
+    const driftTheta = Math.sin(t * 0.00018) * 0.18 * ds;
+    const driftPhi = Math.sin(t * 0.00026 + 1.0) * 0.06 * ds;
 
     // flip pulse: radius を一時的に縮める
     let flipDR = 0;

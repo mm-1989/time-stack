@@ -155,6 +155,55 @@ canvas:active {
   letter-spacing: 0.04em;
 }
 
+/* ---------- レスポンシブ: モバイル ---------- */
+@media (max-width: 640px) {
+  .hud {
+    top: 18px;
+    left: 18px;
+  }
+  .hud-time {
+    font-size: 22px;
+  }
+  .hud-sub {
+    margin-top: 8px;
+    font-size: 10px;
+  }
+  .hud-legend {
+    margin-top: 12px;
+    gap: 10px;
+    font-size: 10px;
+  }
+  .hud-legend .dot {
+    width: 8px;
+    height: 8px;
+    margin-right: 5px;
+  }
+  .hud-legend .legend-meta {
+    margin-left: 2px;
+    padding-left: 10px;
+  }
+  .hud-hint {
+    bottom: 18px;
+    font-size: 9px;
+    padding: 8px 14px;
+    letter-spacing: 0.06em;
+  }
+  .hud-hint kbd {
+    padding: 1px 5px;
+    font-size: 9px;
+  }
+}
+
+/* 縦長 (portrait) で極端に細い場合: ヒントを 2 行に折り返し許可 */
+@media (max-width: 420px) {
+  .hud-hint {
+    white-space: normal;
+    text-align: center;
+    max-width: calc(100vw - 36px);
+    line-height: 1.6;
+  }
+}
+
 /* prefers-reduced-motion: アニメは即時に */
 @media (prefers-reduced-motion: reduce) {
   .hud,
