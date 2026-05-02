@@ -90,6 +90,7 @@ export class Hourglass {
   private minMat: THREE.MeshStandardMaterial;
   private hourMat: THREE.MeshStandardMaterial;
   private waistLight: THREE.PointLight;
+  private streamMat: THREE.ShaderMaterial;
 
   constructor(opts: HourglassOptions) {
     this.opts = opts;
@@ -181,6 +182,10 @@ export class Hourglass {
     const minGeom = new THREE.SphereGeometry(0.038, 10, 10);
     const hourGeom = new THREE.SphereGeometry(0.060, 12, 12);
 
+    // 粒の登場/退場の動線:
+    //   upper: 上 (y=+H 付近) から target へ落下 → 退場時は腰中央 (0,0,0) へ吸い込まれる
+    //   lower: 腰中央 (0,0,0) から target へ広がるように落下 → 退場時も腰中央へ
+    //   いずれも「水が砂時計の腰を通る」イメージで、流れの中心が腰になる。
     const makeStack = (
       half: 'upper' | 'lower',
       rWaist: number,
@@ -188,12 +193,20 @@ export class Hourglass {
       ringSizes: number[],
       geom: THREE.BufferGeometry,
       mat: THREE.Material,
-    ): Stack =>
-      new Stack({
+    ): Stack => {
+      const enterFrom =
+        half === 'upper'
+          ? (t: THREE.Vector3) => new THREE.Vector3(t.x, H * 1.05, t.z)
+          : (_t: THREE.Vector3) => new THREE.Vector3(0, 0, 0);
+      const exitTo = (_t: THREE.Vector3) => new THREE.Vector3(0, 0, 0);
+      return new Stack({
         positions: hourglassShellLayout(half, H, rWaist, rRim, ringSizes),
         createBox: () => new THREE.Mesh(geom, mat),
         origin: new THREE.Vector3(0, 0, 0),
+        enterFrom,
+        exitTo,
       });
+    };
 
     this.upperSec = makeStack('upper', SEC_R_WAIST, SEC_R_RIM, SEC_RING_SIZES, secGeom, this.secMat);
     this.lowerSec = makeStack('lower', SEC_R_WAIST, SEC_R_RIM, SEC_RING_SIZES, secGeom, this.secMat);
@@ -209,6 +222,54 @@ export class Hourglass {
     this.hourShellGroup = new THREE.Group();
     this.hourShellGroup.add(this.upperHour.group, this.lowerHour.group);
     this.group.add(this.secShellGroup, this.minShellGroup, this.hourShellGroup);
+
+    // ---------- 中央落下光柱 (時の流れ) ----------
+    // 砂時計の中央軸に細い垂直の光。下方向にスクロールする縞模様を shader で生成し、
+    // 「時間が落ちている」感を常時可視化する。
+    const streamGeom = new THREE.PlaneGeometry(0.18, 2 * H * 1.05);
+    this.streamMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color(0xfff5d0) },
+        uIntensity: { value: 1.0 },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform vec3 uColor;
+        uniform float uIntensity;
+        varying vec2 vUv;
+        void main() {
+          // 縦の縞 (4 本) が下方向に流れる
+          float v = vUv.y * 4.0 - uTime * 0.9;
+          float band = smoothstep(0.0, 0.45, fract(v)) * (1.0 - smoothstep(0.5, 0.95, fract(v)));
+          // 中心線にだけ光、両端は透明 (radial fade)
+          float r = abs(vUv.x - 0.5) * 2.0;
+          float radial = pow(1.0 - r, 2.0);
+          // 縦方向: 腰 (vUv.y=0.5) を中心に明るく
+          float vertical = 1.0 - abs(vUv.y - 0.5) * 0.7;
+          float bright = (0.18 + band * 0.55) * radial * vertical;
+          gl_FragColor = vec4(uColor * bright * uIntensity, bright * uIntensity);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+    const streamMesh = new THREE.Mesh(streamGeom, this.streamMat);
+    streamMesh.renderOrder = 5;
+    this.group.add(streamMesh);
+    // 反対側からも見えるよう 90 度回した plane を重ねる (常に正面を向く双葉)
+    const streamMesh2 = streamMesh.clone();
+    streamMesh2.rotation.y = Math.PI / 2;
+    this.group.add(streamMesh2);
   }
 
   get flipped(): boolean {
@@ -246,6 +307,9 @@ export class Hourglass {
   }
 
   update(now: number): void {
+    // 中央光柱: time uniform を進めて縞を流す
+    this.streamMat.uniforms.uTime.value = now * 0.001;
+
     if (this.flipping) {
       const t = Math.min((now - this.flipStart) / FLIP_DURATION, 1);
       this.group.rotation.z = (this.flipsDone + easeInOutCubic(t)) * Math.PI;
