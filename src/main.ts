@@ -5,6 +5,7 @@ import { Hud } from './hud';
 import { Hourglass } from './hourglass';
 import { createPostFx } from './postfx';
 import { Background, Dust } from './environment';
+import { CameraRig } from './camera';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
@@ -12,8 +13,15 @@ if (!app) throw new Error('missing #app');
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 0, 9);
+camera.position.set(0, 0, 14);
 camera.lookAt(0, 0, 0);
+
+const cameraRig = new CameraRig(camera, {
+  baseRadius: 9,
+  introRadius: 14,
+  introDurationMs: 2400,
+  target: new THREE.Vector3(0, 0, 0),
+});
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -51,6 +59,7 @@ const hourglass = new Hourglass({
 scene.add(hourglass.group);
 
 const postfx = createPostFx(renderer, scene, camera);
+cameraRig.attachPointer(renderer.domElement);
 
 const hud = new Hud(document.body);
 const speed = Math.max(0.1, parseFloat(new URL(location.href).searchParams.get('speed') ?? '1'));
@@ -110,6 +119,7 @@ function tick(now: number) {
   if (initialized && !hourglass.isFlipping) {
     if (day !== prevDay) {
       hourglass.startFlip(now);
+      cameraRig.triggerFlip(now, 1500);
     } else if (hour !== prevHour) {
       hourglass.triggerHour(now);
       hourglass.triggerMinute(now);
@@ -136,10 +146,14 @@ function tick(now: number) {
   background.setTargetHour(hourFloat);
   background.update(deltaSec);
   dust.update(deltaSec);
+  cameraRig.update(now, deltaSec);
 
   hud.update(virtualSec, speed, frozen);
   postfx.composer.render();
   requestAnimationFrame(tick);
 }
 
-requestAnimationFrame(tick);
+requestAnimationFrame((now) => {
+  cameraRig.start(now);
+  tick(now);
+});
