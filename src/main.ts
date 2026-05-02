@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { syncStack } from './stack';
 import { Hud } from './hud';
 import { Hourglass } from './hourglass';
+import { createPostFx } from './postfx';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
@@ -17,6 +18,9 @@ camera.lookAt(0, 0, 0);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
 app.appendChild(renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.5));
@@ -31,6 +35,8 @@ const hourglass = new Hourglass({
   scene,
 });
 scene.add(hourglass.group);
+
+const postfx = createPostFx(renderer, scene, camera);
 
 const hud = new Hud(document.body);
 const speed = Math.max(0.1, parseFloat(new URL(location.href).searchParams.get('speed') ?? '1'));
@@ -66,6 +72,7 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  postfx.resize(window.innerWidth, window.innerHeight, renderer.getPixelRatio());
 });
 
 let prevMin = -1;
@@ -111,7 +118,7 @@ function tick(now: number) {
   hourglass.update(now);
 
   hud.update(virtualSec, speed, frozen);
-  renderer.render(scene, camera);
+  postfx.composer.render();
   requestAnimationFrame(tick);
 }
 
