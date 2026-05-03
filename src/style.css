@@ -290,6 +290,28 @@ canvas {
   letter-spacing: 0.04em;
 }
 
+/* ---------- マスホバーツールチップ ---------- */
+.cell-tooltip {
+  position: fixed;
+  pointer-events: none;
+  background: rgba(8, 12, 22, 0.85);
+  color: #f1f4fa;
+  font: 500 11px/1.2 ui-monospace, 'SF Mono', Menlo, monospace;
+  letter-spacing: 0.05em;
+  padding: 7px 11px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+  white-space: nowrap;
+}
+.cell-tooltip.show {
+  opacity: 1;
+}
+
 /* ---------- レスポンシブ: モバイル ---------- */
 @media (max-width: 640px) {
   .hud {

@@ -108,6 +108,47 @@ export class TimeGrid {
     this.filled = clamped;
   }
 
+  /**
+   * CSS px (canvas 相対) からマス idx を逆算。-1 = ヒットなし or トランジション中。
+   * ホバーツールチップ用。
+   */
+  hitTest(cssX: number, cssY: number): number {
+    if (this.mode !== 'idle') return -1;
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const px = cssX * this.dpr;
+    const py = cssY * this.dpr;
+
+    const padX = W * 0.08;
+    const padTop = H * 0.18;
+    const padBot = H * 0.18;
+    const areaX = padX;
+    const areaY = padTop;
+    const areaW = W - padX * 2;
+    const areaH = H - padTop - padBot;
+
+    if (px < areaX || px > areaX + areaW) return -1;
+    if (py < areaY || py > areaY + areaH) return -1;
+
+    const { cols, rows } = this.chooseLayout(areaW, areaH, this.opts.count);
+    const gap = Math.max(2, Math.min(areaW / cols, areaH / rows) * 0.12);
+    const cellW = (areaW - gap * (cols - 1)) / cols;
+    const cellH = (areaH - gap * (rows - 1)) / rows;
+
+    const cIdx = Math.floor((px - areaX) / (cellW + gap));
+    const rIdx = Math.floor((py - areaY) / (cellH + gap));
+    if (cIdx < 0 || cIdx >= cols || rIdx < 0 || rIdx >= rows) return -1;
+
+    // gap 部分にヒットしてないかチェック
+    const cellLeft = areaX + cIdx * (cellW + gap);
+    const cellTop = areaY + rIdx * (cellH + gap);
+    if (px > cellLeft + cellW || py > cellTop + cellH) return -1;
+
+    const idx = rIdx * cols + cIdx;
+    if (idx < 0 || idx >= this.opts.count) return -1;
+    return idx;
+  }
+
   /** トランジションなしでスケールを切替 (初期化など) */
   setOptions(opts: GridOptions): void {
     this.opts = opts;

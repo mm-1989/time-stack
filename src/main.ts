@@ -165,8 +165,51 @@ if (debug === 'promotion') {
   }, 100);
 }
 
+// ホバーツールチップ: マスにマウスを当てるとそのマスが代表する時刻範囲を表示
+const tooltipEl = document.createElement('div');
+tooltipEl.className = 'cell-tooltip';
+document.body.appendChild(tooltipEl);
+
+let lastVirtualMs = 0;
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function buildTooltipText(idx: number): string {
+  const unit = SCALES[currentScaleId].unit;
+  const totalSec = Math.floor(lastVirtualMs / 1000);
+  const hour = Math.floor(totalSec / 3600) % 24;
+  const min = Math.floor(totalSec / 60) % 60;
+  let timeRange: string;
+  if (currentScaleId === 'day') {
+    timeRange = `${pad2(idx)}:00 — ${pad2(idx)}:59:59`;
+  } else if (currentScaleId === 'hour') {
+    timeRange = `${pad2(hour)}:${pad2(idx)}:00 — ${pad2(hour)}:${pad2(idx)}:59`;
+  } else {
+    timeRange = `${pad2(hour)}:${pad2(min)}:${pad2(idx)}`;
+  }
+  return `${idx}${unit}  ·  ${timeRange}`;
+}
+
+canvas.addEventListener('pointermove', (e) => {
+  const idx = grid.hitTest(e.clientX, e.clientY);
+  if (idx < 0) {
+    tooltipEl.classList.remove('show');
+    return;
+  }
+  tooltipEl.textContent = buildTooltipText(idx);
+  tooltipEl.style.left = `${e.clientX + 14}px`;
+  tooltipEl.style.top = `${e.clientY + 14}px`;
+  tooltipEl.classList.add('show');
+});
+canvas.addEventListener('pointerleave', () => {
+  tooltipEl.classList.remove('show');
+});
+
 function tick(now: number): void {
   const virtualMs = clock.tick(now);
+  lastVirtualMs = virtualMs;
   const filled = filledFor(SCALES[currentScaleId], virtualMs);
   grid.setFilled(filled, now);
   checkBoundaries(virtualMs, now);
