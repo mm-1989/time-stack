@@ -13,6 +13,8 @@ export interface GridOptions {
   fillColor: string;
   /** 1 マス内に描く下位粒子の数 (0 で粒子なし、進行中マスのみ可視化) */
   subdivisions?: number;
+  /** 進行中マス下に添える単位ラベル ('h' / 'm' / 's')。例: 1 day モードで 14 番目進行中なら "14h" */
+  unit?: string;
 }
 
 type Mode = 'idle' | 'out' | 'in' | 'collapse';
@@ -426,6 +428,20 @@ export class TimeGrid {
       roundRect(ctx, x, y, w, h, r);
       ctx.stroke();
       ctx.restore();
+
+      // 進行中マスの下に「N + unit」ラベル(例: 14h / 35m / 47s)
+      // 「グリッドだけ見て今どこか」を一目化する
+      const unit = opts.unit;
+      if (unit) {
+        const fontSize = Math.max(9, Math.min(18, Math.min(w, h) * 0.18));
+        ctx.save();
+        ctx.fillStyle = alphaCol(fillColor, 0.85);
+        ctx.font = `500 ${fontSize}px ui-monospace, "SF Mono", Menlo, monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`${idx}${unit}`, x + w / 2, y + h + 4 * this.dpr);
+        ctx.restore();
+      }
     }
   }
 

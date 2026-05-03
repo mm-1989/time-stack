@@ -34,6 +34,7 @@ function scaleToGridOpts(id: ScaleId): {
   scaleLabel: string;
   fillColor: string;
   subdivisions: number;
+  unit: string;
 } {
   const s = SCALES[id];
   return {
@@ -41,6 +42,7 @@ function scaleToGridOpts(id: ScaleId): {
     scaleLabel: s.label,
     fillColor: s.fillColor,
     subdivisions: s.subdivisions,
+    unit: s.unit,
   };
 }
 

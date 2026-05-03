@@ -18,6 +18,8 @@ export interface Scale {
   fillColor: string;
   /** 1 マス内に描く下位粒子の数 (0 で粒子なし)。進行中マスでのみ可視化 */
   subdivisions: number;
+  /** 各マスが表す単位 (進行中マス下のラベル用) */
+  unit: 'h' | 'm' | 's';
 }
 
 export const SCALES: Record<ScaleId, Scale> = {
@@ -30,6 +32,7 @@ export const SCALES: Record<ScaleId, Scale> = {
     shortLabel: '1 min',
     fillColor: '#fff5d0',
     subdivisions: 0, // < 1 秒は人間の認知粒度を超えるので粒子なし
+    unit: 's',
   },
   hour: {
     id: 'hour',
@@ -40,6 +43,7 @@ export const SCALES: Record<ScaleId, Scale> = {
     shortLabel: '1 hour',
     fillColor: '#f2c879',
     subdivisions: 60, // 1 分マス内に 60 秒粒子
+    unit: 'm',
   },
   day: {
     id: 'day',
@@ -50,6 +54,7 @@ export const SCALES: Record<ScaleId, Scale> = {
     shortLabel: '1 day',
     fillColor: '#b48b5a',
     subdivisions: 60, // 1 時間マス内に 60 分粒子
+    unit: 'h',
   },
 };
 

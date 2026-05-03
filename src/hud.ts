@@ -30,9 +30,12 @@ export class Hud {
 
     this.hintEl = document.createElement('div');
     this.hintEl.className = 'hud-hint';
-    this.hintEl.innerHTML =
-      '<kbd>M</kbd> / <kbd>H</kbd> / <kbd>D</kbd> スケール切替 ・ ' +
-      '<kbd>Space</kbd> 一時停止 ・ <kbd>?speed=N</kbd> で時間倍率';
+    // モバイルでは tap 操作 + ヒントとバッジの干渉回避のため M/H/D 部分を省略
+    const isCoarse = window.matchMedia('(max-width: 640px), (pointer: coarse)').matches;
+    this.hintEl.innerHTML = isCoarse
+      ? '<kbd>Space</kbd> 一時停止 ・ <kbd>?speed=N</kbd> で時間倍率'
+      : '<kbd>M</kbd> / <kbd>H</kbd> / <kbd>D</kbd> スケール切替 ・ ' +
+        '<kbd>Space</kbd> 一時停止 ・ <kbd>?speed=N</kbd> で時間倍率';
     parent.appendChild(this.hintEl);
 
     requestAnimationFrame(() => {

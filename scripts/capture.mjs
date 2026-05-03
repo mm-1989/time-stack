@@ -29,8 +29,8 @@ const SCENARIOS = [
   { name: '03-minute-idle', query: 'scale=minute', wait: 1500 },
   { name: '04-hour-mid', query: 'scale=hour&speed=900', wait: 5000 },
   // ?reset で 0 起点。speed=86400 で 60 秒経過 = ちょうど 1 周期 = collapse 発火。
-  // +50ms で集約のごく初期 (マスがまだ画面に残りつつ中央へ動き始めている瞬間)
-  { name: '05-collapse', query: 'scale=hour&speed=86400&reset', wait: 60_050 },
+  // +20ms で集約の極初期 (マスが画面端に残りつつ中央へ動き出した瞬間)
+  { name: '05-collapse', query: 'scale=hour&speed=86400&reset', wait: 60_020 },
   { name: '06-mobile-day', query: 'scale=day', wait: 1500, viewport: { width: 375, height: 812 } },
 ];
 
