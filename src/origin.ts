@@ -5,10 +5,12 @@ import { elapsedSinceJstMidnight } from './time';
 
 export type Origin = { mode: 'now' } | { mode: 'custom'; date: Date };
 
-/** URL の ?since= をパースして Origin を返す。無効/無し なら null。 */
+/** URL の ?since= をパースして Origin を返す。無効/無し なら null。
+ *  特殊値 'now' は NOW モード (init 画面 skip 用)。 */
 export function parseOriginFromUrl(url: URL): Origin | null {
   const sinceStr = url.searchParams.get('since');
   if (!sinceStr) return null;
+  if (sinceStr === 'now') return { mode: 'now' };
   const date = new Date(sinceStr);
   if (isNaN(date.getTime())) return null;
   return { mode: 'custom', date };
