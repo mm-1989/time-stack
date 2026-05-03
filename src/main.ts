@@ -35,6 +35,14 @@ const miniGrid = new MiniGrid(document.body);
 const SCALE_INDEX: Record<ScaleId, number> = { minute: 0, hour: 1, day: 2 };
 const SCALE_AT_INDEX: ScaleId[] = ['minute', 'hour', 'day'];
 
+// スケール階層: 1 周期完了時にどのバッジへ promotion を飛ばすか
+// (changeScale / syncMiniScale より前に宣言する。const は TDZ なので順序重要)
+const PROMOTE_TARGET: Record<ScaleId, ScaleId | null> = {
+  minute: 'hour',
+  hour: 'day',
+  day: null, // 上位なし
+};
+
 const scaleSwitch = new ScaleSwitch(document.body, currentScaleId, (id) => {
   changeScale(id);
 });
@@ -72,13 +80,6 @@ function syncMiniScale(): void {
   miniGrid.setScale(PROMOTE_TARGET[currentScaleId]);
 }
 syncMiniScale();
-
-// スケール階層: 1 周期完了時にどのバッジへ promotion を飛ばすか
-const PROMOTE_TARGET: Record<ScaleId, ScaleId | null> = {
-  minute: 'hour',
-  hour: 'day',
-  day: null, // 上位なし
-};
 
 function scaleToGridOpts(id: ScaleId): {
   count: number;
