@@ -1,66 +1,92 @@
 # time-stack
 
-経過時間を「箱の積み重ね」と「色の遷移」で体感する時間可視化 Web アプリ。
+時間の経過を **平面グリッド** で可視化する Web アプリ。TRON 風ワイヤーフレーム UI で「いま何時何分何秒なのか」を直感的に体感できる。
+
+🌐 **Live demo**: https://mm-1989.github.io/time-stack/
 
 ## コンセプト
 
-時間の流れを **スケールごとに違う表現** で可視化する。
+「時間の絶対量」を **3 つのスケール** に切り替えて可視化:
 
-| スケール | 表現 | 意図 |
-|---------|------|------|
-| 秒 | 小箱がポンと出て積み上がる | 細粒度の蓄積感 |
-| 分 | 60 個の小箱が 1 個の中箱に集約 | 「変身」アニメで遷移を演出 |
-| 時 | 中箱の色が時間進行で hue 変化 | 大量の箱を避け色で連続感 |
-| 日 | 背景色 / ライティングが日没のように推移 | 環境色で 1 日の流れ |
+| スケール | グリッド | 1 マスの意味 |
+|---|---|---|
+| **1 minute** | 60 マス | 1 秒 |
+| **1 hour** | 60 マス | 1 分 (内部に 60 秒粒子) |
+| **1 day** | 24 マス | 1 時間 (内部に 60 分粒子) |
 
-「前景 = 蓄積するゲージ、背景 = 昼夜サイクル」という遠近構造で、データ UX をゲーム文法で語る試み。
+各マスが「今ここ」で塗られ、進行中マス内では下位粒度(粒子)が動き続ける。1 周期完了で **集約アニメ → 上位スケールへ昇格フライト**(光が画面上部のスケールバッジに飛んでいく)。
+
+時間の階層(秒 → 分 → 時 → 日)が、ビジュアルとして連鎖する設計。
+
+## 主要な操作
+
+| キー / 操作 | 動作 |
+|---|---|
+| `M` / `H` / `D` | スケール切替(1 分 / 1 時間 / 1 日) |
+| マウス移動 | カメラ視差(canvas が pointer に追従) |
+| マスホバー | そのマスが代表する時刻範囲をツールチップ表示 |
+| `Space` | 一時停止 / 再開 |
+| `S` | サウンド ON / OFF |
+| `Shift + Click` | デバッグ: 該当マスへ時刻ジャンプ |
+| `↑↑↓↓←→←→BA` | ✨ Easter egg |
+
+## URL クエリ
+
+| クエリ | 例 | 効果 |
+|---|---|---|
+| `?scale=` | `?scale=hour` | 起動スケール指定 (`minute` / `hour` / `day`) |
+| `?since=` | `?since=2000-01-01` | **任意起点**(誕生日 / 記念日 からの経過を可視化) |
+| `?speed=` | `?speed=900` | 時間倍率(デバッグ用) |
+| `?animSlow=` | `?animSlow=4` | アニメ全体を N 倍スローに |
+| `?reset` | `?reset` | virtualMs を 0 から開始 |
+| `?debug=promotion` | | 起動時に promotion フライトを強制発火 |
+
+例: `?since=1990-01-01` で「1990 年元旦からの経過時間」を秒/分/時/日のスケールで切替視聴できる。
 
 ## 技術スタック
 
-- Vite 8 + TypeScript
-- Three.js 0.184
-- GitHub Pages 配信
+- **Vite 6** + TypeScript 5.6
+- **Canvas 2D**(Three.js は不使用、bundle 30KB / gzip 10KB)
+- **GitHub Pages** 配信
+- **GitHub Actions** で deploy + Playwright 自動キャプチャ → `screenshots` ブランチ
 
 ## 開発
 
 ```bash
 npm install
-npm run dev          # http://localhost:5173
-npm run dev -- --host  # LAN 公開(実機確認用)
-npm run build        # dist/ にビルド
-npm run preview      # ビルド成果物を確認
-npm run typecheck    # 型チェックのみ
+npm run dev               # http://localhost:5173/time-stack/
+npm run typecheck         # tsc --noEmit
+npm run build             # dist/ にビルド
+npm run preview           # production build をローカルで配信
+npm run capture:local     # Playwright で localhost をキャプチャ
 ```
 
-## フェーズ計画
+## 機能ダイジェスト
 
-### Phase 0(現在)
-- [x] Vite + TS + Three.js scaffold
-- [x] vite.config.ts に GitHub Pages base path 設定
-- [x] GitHub Actions deploy workflow
-- [ ] GitHub repo 作成 + 初回 push(ユーザー作業)
-- [ ] Pages 配信が表示される
+### ビジュアル(TRON コンセプト)
+- ワイヤーフレームマス + ネオン発光(cyan / orange)
+- 進行中マス boost(1.22 倍)+ entry アニメ + 画面端まで貫通する crosshair
+- 進行中マス内で下位粒子が脈動、最新粒子は白で「先頭」を強調
+- 背景に 32px 間隔のアンビエントグリッド + radial 消失点フェード
+- 4 隅 L 字コーナーマーク + CRT スキャンライン(静止 + 動く 2 層)
+- マウス追随視差(canvas が ±6px シフト)
 
-### Phase 1: 秒の積み上げ
-- [ ] 1 秒経過ごとに seconds スタックに小箱が追加
-- [ ] 60 個積まれたらクリア
-- [ ] レイアウト基礎(座標 / カメラ)
+### 時間連鎖
+- マス完了で `tick` 音 + 上位バッジが micropulse
+- 1 周期完了で全マス中央集約 + afterglow → 上位スケールバッジへ promotion フライト(弧軌道 + trail)
+- スケール切替バッジ自体に進捗バー内蔵(全スケール独立)
+- ミニ上位ビュー(右上に「現在 +1 階層」のグリッド常時表示)
 
-### Phase 2: 分・時・日への昇格
-- [ ] 60 秒 → 1 分中箱への集約アニメ
-- [ ] 60 分 → 1 時(色変化開始)
-- [ ] 24 時 → 1 日(背景遷移)
+### 起動
+- 「> SELECT ORIGIN」モーダルで NOW か 任意日時を選択
+- 「> INITIALIZING TIME GRID」 1.4s フェード
+- グリッドが中央から stagger で展開する シネマ intro
 
-### Phase 3: UX 仕上げ
-- [ ] 色設計(hue / 環境光 / 影)
-- [ ] カメラワーク(全体俯瞰 ↔ 注目スケール)
-- [ ] OGP / サムネ / README 整備
-
-### Phase 4: 拡張(任意)
-- [ ] PWA 化
-- [ ] 起点時刻のカスタマイズ(今日の 00:00 / 任意日時)
-- [ ] 永続化(リロード越しの継続)
+### サウンド + 触感
+- WebAudio で tick / chime / promote 音(sine wave 合成、合計 3KB 程度)
+- mobile では `navigator.vibrate(15)` で軽い触感
+- `S` キーまたは右下インジケータで toggle
 
 ## ライセンス
 
-このリポジトリのコードは個人ポートフォリオ目的。再利用・再配布の許諾は別途設定予定。
+MIT (個人ポートフォリオ作品)
