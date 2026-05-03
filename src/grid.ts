@@ -314,13 +314,32 @@ export class TimeGrid {
     const { ctx } = this;
     const isFilled = idx < intFilled;
     const isCurrent = idx === intFilled;
+    const isPreview = idx === intFilled + 1; // 次に塗られるマス (予告)
     const fillColor = opts.fillColor;
 
-    // 枠線
-    ctx.strokeStyle = isFilled || isCurrent ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)';
+    // 枠線 (preview は中間の輝度)
+    let strokeAlpha = 0.06;
+    if (isFilled || isCurrent) strokeAlpha = 0.18;
+    else if (isPreview) strokeAlpha = 0.14;
+    ctx.strokeStyle = `rgba(255,255,255,${strokeAlpha})`;
     ctx.lineWidth = 1 * this.dpr;
     roundRect(ctx, x, y, w, h, r);
     ctx.stroke();
+
+    // Preview: 次に塗られるマスを「予告」として、薄い fillColor 枠 + ごく薄い塗りで示す
+    if (isPreview) {
+      ctx.save();
+      // ごく薄い塗り (進行中マスとの差を保つ)
+      ctx.fillStyle = alphaCol(fillColor, 0.04);
+      roundRect(ctx, x, y, w, h, r);
+      ctx.fill();
+      // 細い予告枠線 (進行中の glow より控えめ)
+      ctx.strokeStyle = alphaCol(fillColor, 0.20);
+      ctx.lineWidth = 1 * this.dpr;
+      roundRect(ctx, x, y, w, h, r);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     if (isFilled) {
       const g = ctx.createLinearGradient(x, y, x, y + h);
