@@ -2,6 +2,7 @@
 // 3D 砂時計版から、機能を簡素化しつつフェード演出は維持。
 
 import { formatJstClock } from './time';
+import { t } from './i18n';
 
 export class Hud {
   private wrap: HTMLDivElement;
@@ -45,10 +46,7 @@ export class Hud {
     this.hintEl.className = 'hud-hint';
     // モバイルでは tap 操作 + ヒントとバッジの干渉回避のため M/H/D 部分を省略
     const isCoarse = window.matchMedia('(max-width: 640px), (pointer: coarse)').matches;
-    this.hintEl.innerHTML = isCoarse
-      ? '<kbd>Space</kbd> 一時停止 ・ <kbd>?speed=N</kbd> で時間倍率'
-      : '<kbd>M</kbd> / <kbd>H</kbd> / <kbd>D</kbd> スケール切替 ・ ' +
-        '<kbd>Space</kbd> 一時停止 ・ <kbd>S</kbd> サウンド ・ <kbd>Shift+Click</kbd> でジャンプ';
+    this.hintEl.innerHTML = isCoarse ? t('hint.shortcuts.coarse') : t('hint.shortcuts');
     parent.appendChild(this.hintEl);
 
     requestAnimationFrame(() => {
@@ -86,7 +84,7 @@ export class Hud {
     this.elapsedEl.classList.toggle('hud-frozen', frozen);
 
     const isRealtime = Math.abs(speed - 1) < 0.001;
-    const speedTxt = isRealtime ? '実時間' : `×${speed}`;
+    const speedTxt = isRealtime ? t('hud.realtime') : `×${speed}`;
     this.subEl.textContent = frozen ? `${speedTxt}  ⏸ FROZEN` : speedTxt;
 
     // 壁時計 (JST): 加速モードで経過時間と乖離する時のみ表示。
@@ -108,7 +106,7 @@ export class Hud {
     }
     const remaining = targetDate.getTime() - Date.now();
     if (remaining <= 0) {
-      this.countdownEl.textContent = `→ ${formatTargetDate(targetDate)} · REACHED`;
+      this.countdownEl.textContent = `→ ${formatTargetDate(targetDate)} · ${t('hud.countdown.reached')}`;
       return;
     }
     const totalSec = Math.floor(remaining / 1000);
@@ -121,7 +119,7 @@ export class Hud {
     if (days > 0 || hours > 0) parts.push(`${pad(hours)}H`);
     parts.push(`${pad(mins)}M`);
     parts.push(`${pad(secs)}S`);
-    this.countdownEl.textContent = `→ ${formatTargetDate(targetDate)} · ${parts.join(' ')} 残`;
+    this.countdownEl.textContent = `→ ${formatTargetDate(targetDate)} · ${parts.join(' ')} ${t('hud.countdown.suffix')}`;
   }
 }
 

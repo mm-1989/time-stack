@@ -1,4 +1,5 @@
 import { SCALE_ORDER, SCALES, type ScaleId } from './scales';
+import { t } from './i18n';
 
 // スケール切替 UI: 上部中央に 3 ボタン。クリック / キーボード (m/h/d) / 矢印切替に対応。
 
@@ -16,7 +17,7 @@ export class ScaleSwitch {
     this.root = document.createElement('div');
     this.root.className = 'scale-switch';
     this.root.setAttribute('role', 'tablist');
-    this.root.setAttribute('aria-label', 'スケール切替');
+    this.root.setAttribute('aria-label', t('scaleSwitch.aria'));
     parent.appendChild(this.root);
 
     for (const id of SCALE_ORDER) {

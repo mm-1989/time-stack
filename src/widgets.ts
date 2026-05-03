@@ -4,14 +4,15 @@
 import type { TimeGrid } from './grid';
 import { isMuted, setMuted } from './audio';
 import { SCALES, type ScaleId } from './scales';
+import { t } from './i18n';
 
 /** 右下のサウンド ON/OFF インジケータ DOM。クリックで toggle。 */
 export function setupSoundIndicator(): { refresh: () => void } {
   const el = document.createElement('button');
   el.className = 'sound-indicator';
   el.type = 'button';
-  el.title = 'S キーでオンオフ';
-  el.setAttribute('aria-label', 'サウンド ON/OFF 切替');
+  el.title = t('sound.tooltip');
+  el.setAttribute('aria-label', t('sound.aria'));
   document.body.appendChild(el);
   const refresh = () => {
     el.textContent = isMuted() ? '♪ MUTED' : '♪ ON';

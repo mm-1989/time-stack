@@ -2,6 +2,7 @@
 // 選択結果を Promise<Origin> で返す。URL に ?since がある場合はこの画面を skip。
 
 import type { Origin } from './origin';
+import { t } from './i18n';
 
 export class InitScreen {
   private root: HTMLDivElement;
@@ -15,25 +16,25 @@ export class InitScreen {
     this.root.setAttribute('aria-labelledby', 'init-title');
     this.root.innerHTML = `
       <div class="init-panel">
-        <div class="init-title" id="init-title">&gt;&nbsp;SELECT ORIGIN</div>
+        <div class="init-title" id="init-title">${t('init.title')}</div>
         <div class="init-options">
           <button class="init-opt active" data-opt="now" type="button">
-            <span class="init-opt-label">NOW</span>
-            <span class="init-opt-sub">いまこの瞬間から計測 (スケールが順次アンロック)</span>
+            <span class="init-opt-label">${t('init.now.label')}</span>
+            <span class="init-opt-sub">${t('init.now.sub')}</span>
           </button>
           <button class="init-opt" data-opt="custom" type="button">
-            <span class="init-opt-label">CUSTOM</span>
-            <span class="init-opt-sub">起点日時を指定 (誕生日 / 記念日 etc.)</span>
+            <span class="init-opt-label">${t('init.custom.label')}</span>
+            <span class="init-opt-sub">${t('init.custom.sub')}</span>
           </button>
           <button class="init-opt" data-opt="countdown" type="button">
-            <span class="init-opt-label">COUNTDOWN</span>
-            <span class="init-opt-sub">目標日時までの残時間を計測</span>
+            <span class="init-opt-label">${t('init.countdown.label')}</span>
+            <span class="init-opt-sub">${t('init.countdown.sub')}</span>
           </button>
         </div>
         <div class="init-custom-input hidden">
           <input type="datetime-local" class="init-date" />
         </div>
-        <button class="init-begin" type="button">&gt;&nbsp;BEGIN</button>
+        <button class="init-begin" type="button">${t('init.begin')}</button>
       </div>
     `;
     parent.appendChild(this.root);

@@ -37,9 +37,10 @@ const SCENARIOS = [
   { name: '06-mobile-day', query: 'scale=day&since=now&unlock=all', wait: 1500, viewport: { width: 375, height: 812 } },
   { name: '07-promotion', query: 'scale=minute&debug=promotion&animSlow=4&since=now&unlock=all', wait: 1300, waitUntil: 'domcontentloaded' },
   // 音声デバッグ: AudioContext.state + play 回数の HUD 表示と console log を捉える。
-  // speed=900 で 1.5 秒に 1 マス完了 = tick が確実に走る。triggerGesture で user
-  // gesture (page.mouse.click) を発火して AudioContext を resume させる。
   { name: '08-audio-state', query: 'scale=minute&debug=audio&since=now&speed=900&unlock=all', wait: 4000, captureConsole: true, triggerGesture: true },
+  // パフォーマンスデバッグ: 重い状態 (animSlow=4) で fps + render 時間を計測。
+  // 4 秒間で複数サンプル → console.log の log を解析して fps を確認。
+  { name: '09-perf', query: 'scale=hour&debug=perf&since=now&speed=900&unlock=all&animSlow=4', wait: 4000, captureConsole: true },
 ];
 
 function buildUrl(query) {

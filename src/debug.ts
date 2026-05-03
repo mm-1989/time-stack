@@ -53,3 +53,31 @@ export function setupAudioDebug(hud: Hud): void {
     }
   }, 200);
 }
+
+/** ?debug=perf: fps と 1 フレームあたり render 時間を HUD + console に出力。
+ *  返した record(renderMs) を tick 内で grid.render の前後で呼ぶ。 */
+export function setupPerfDebug(hud: Hud): { record: (renderMs: number) => void } {
+  let frames = 0;
+  let renderMsSum = 0;
+  let lastSample = performance.now();
+
+  setInterval(() => {
+    const now = performance.now();
+    const elapsed = now - lastSample;
+    const fps = elapsed > 0 ? (frames * 1000) / elapsed : 0;
+    const avgRender = frames > 0 ? renderMsSum / frames : 0;
+    const line = `PERF: ${fps.toFixed(1)} fps · render=${avgRender.toFixed(2)}ms · frames=${frames}`;
+    hud.setDebug(line);
+    console.log('[time-stack/perf]', line);
+    frames = 0;
+    renderMsSum = 0;
+    lastSample = now;
+  }, 1000);
+
+  return {
+    record(renderMs: number) {
+      frames++;
+      renderMsSum += renderMs;
+    },
+  };
+}

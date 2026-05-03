@@ -14,8 +14,12 @@ import {
   parseOriginFromUrl, initialMsForOrigin, formatDateForUrl, type Origin,
 } from './origin';
 import { setupKonami, showEasterEggMessage } from './easterEgg';
-import { maybeRunAudioTest, setupPromotionDebug, setupAudioDebug } from './debug';
+import { maybeRunAudioTest, setupPromotionDebug, setupAudioDebug, setupPerfDebug } from './debug';
 import { setupSoundIndicator, setupHoverTooltip, setupMouseParallax } from './widgets';
+import { initLang, t } from './i18n';
+
+// 言語検出 (?lang=en or navigator.language) を最初に実行
+initLang();
 
 // ===== 1. URL パラメータ・起動定数 =====
 const params = new URL(location.href).searchParams;
@@ -49,7 +53,7 @@ function initApp(): void {
   const canvas = document.createElement('canvas');
   canvas.className = 'time-canvas';
   canvas.setAttribute('role', 'img');
-  canvas.setAttribute('aria-label', '時間グリッドのビジュアライザ');
+  canvas.setAttribute('aria-label', t('canvas.aria'));
   app.appendChild(canvas);
 
   // ===== 3. 状態 =====
@@ -133,7 +137,7 @@ function initApp(): void {
   function showUnlockMessage(label: string): void {
     const msg = document.createElement('div');
     msg.className = 'tron-message';
-    msg.textContent = `> NEW SCALE: ${label}`;
+    msg.textContent = `${t('unlock.prefix')}${label}`;
     document.body.appendChild(msg);
     setTimeout(() => msg.classList.add('show'), 30);
     setTimeout(() => msg.classList.remove('show'), 2200);
@@ -205,6 +209,10 @@ function initApp(): void {
   }
   if (debug === 'audio') {
     setupAudioDebug(hud);
+  }
+  let perfRecord: ((renderMs: number) => void) | null = null;
+  if (debug === 'perf') {
+    perfRecord = setupPerfDebug(hud).record;
   }
 
   // ===== 9. 周期境界 + マス完了の検出 =====
@@ -280,7 +288,9 @@ function initApp(): void {
     });
     const upperId = PROMOTE_TARGET[currentScaleId];
     if (upperId) miniGrid.setFilled(filledFor(SCALES[upperId], virtualMs));
+    const renderStart = perfRecord ? performance.now() : 0;
     grid.render(now);
+    if (perfRecord) perfRecord(performance.now() - renderStart);
     hud.update(virtualMs, speed, clock.frozen);
     if (activeOrigin?.mode === 'countdown') {
       hud.setCountdown(activeOrigin.date);
