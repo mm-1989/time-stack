@@ -639,6 +639,14 @@ export class TimeGrid {
       ctx.stroke();
       ctx.restore();
 
+      // TRON: 進行中マス内をゆっくり走るスキャンバー (1.5 秒周期で上→下)
+      const scanT = ((now / 1500) % 1 + 1) % 1;
+      const barY = y + h * scanT;
+      ctx.save();
+      ctx.fillStyle = alphaCol(fillColor, 0.5 * (1 - Math.abs(scanT - 0.5) * 1.4));
+      ctx.fillRect(x, barY, w, 1.2 * this.dpr);
+      ctx.restore();
+
       // 進行中マスの下に「N + unit」ラベル(例: 14h / 35m / 47s)
       // 「グリッドだけ見て今どこか」を一目化する。可読性重視で weight 700 + 白系。
       const unit = opts.unit;

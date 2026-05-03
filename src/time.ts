@@ -24,6 +24,11 @@ export class VirtualClock {
     this.virtualMs += deltaMs;
   }
 
+  /** virtualMs を直接書き換え (マスクリック ジャンプ用) */
+  setVirtualMs(ms: number): void {
+    this.virtualMs = ms;
+  }
+
   toggleFreeze(): void {
     this.frozen = !this.frozen;
   }
