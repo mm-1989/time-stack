@@ -79,6 +79,13 @@ canvas {
   color: #7a8398;
 }
 
+.hud-jst {
+  margin-top: 6px;
+  font: 400 11px/1 ui-monospace, monospace;
+  letter-spacing: 0.18em;
+  color: #5a6378;
+}
+
 .hud-legend {
   margin-top: 18px;
   display: flex;

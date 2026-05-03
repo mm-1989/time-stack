@@ -1,10 +1,13 @@
 // 平面ビュー用 HUD: 経過時間 + 状態 + 操作ヒント。
 // 3D 砂時計版から、機能を簡素化しつつフェード演出は維持。
 
+import { formatJstClock } from './time';
+
 export class Hud {
   private wrap: HTMLDivElement;
   private elapsedEl: HTMLDivElement;
   private subEl: HTMLDivElement;
+  private jstEl: HTMLDivElement;
   private hintEl: HTMLDivElement;
   private hintTimer: number | null = null;
 
@@ -20,6 +23,10 @@ export class Hud {
     this.subEl = document.createElement('div');
     this.subEl.className = 'hud-sub';
     this.wrap.appendChild(this.subEl);
+
+    this.jstEl = document.createElement('div');
+    this.jstEl.className = 'hud-jst';
+    this.wrap.appendChild(this.jstEl);
 
     this.hintEl = document.createElement('div');
     this.hintEl.className = 'hud-hint';
@@ -64,6 +71,9 @@ export class Hud {
 
     const speedTxt = speed === 1 ? '実時間' : `×${speed}`;
     this.subEl.textContent = frozen ? `${speedTxt}  ⏸ FROZEN` : speedTxt;
+
+    // 壁時計 (JST 現在時刻): 起動オフセットの根拠を可視化
+    this.jstEl.textContent = `JST  ${formatJstClock(Date.now())}`;
   }
 }
 

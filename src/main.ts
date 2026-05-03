@@ -1,5 +1,5 @@
 import './style.css';
-import { VirtualClock } from './time';
+import { VirtualClock, elapsedSinceJstMidnight } from './time';
 import { TimeGrid } from './grid';
 import { Hud } from './hud';
 import { SCALES, filledFor, type ScaleId } from './scales';
@@ -13,7 +13,11 @@ canvas.className = 'time-canvas';
 app.appendChild(canvas);
 
 const speed = Math.max(0.1, parseFloat(new URL(location.href).searchParams.get('speed') ?? '1'));
-const clock = new VirtualClock(speed, performance.now());
+// 起点は JST 本日 0:00:00。今が JST 12:30 なら 12 時間 30 分経過済みでスタート。
+// ?reset を付けると 0 から始まる (デバッグ用)。
+const resetStart = new URL(location.href).searchParams.has('reset');
+const initialVirtualMs = resetStart ? 0 : elapsedSinceJstMidnight(Date.now());
+const clock = new VirtualClock(speed, performance.now(), initialVirtualMs);
 
 let currentScaleId: ScaleId = (new URL(location.href).searchParams.get('scale') as ScaleId) ?? 'day';
 if (!(currentScaleId in SCALES)) currentScaleId = 'day';
