@@ -173,6 +173,39 @@ body::after {
   }
 }
 
+/* サウンドオン/オフインジケータ (右下、フッターの上) */
+.sound-indicator {
+  position: fixed;
+  right: 48px;
+  bottom: 38px;
+  font: 500 9px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(0, 245, 255, 0.32);
+  cursor: pointer;
+  user-select: none;
+  z-index: 5;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.sound-indicator:hover {
+  color: var(--tron-cyan);
+  border-color: var(--tron-line);
+}
+.sound-indicator.on {
+  color: var(--tron-cyan);
+  text-shadow: 0 0 8px rgba(0, 245, 255, 0.4);
+}
+@media (max-width: 640px) {
+  .sound-indicator {
+    right: 36px;
+    bottom: 30px;
+    font-size: 8px;
+  }
+}
+
 /* フッター情報 (右下、非常に控えめ) */
 .footer-info {
   position: fixed;

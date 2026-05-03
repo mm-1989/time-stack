@@ -6,6 +6,7 @@ import { SCALES, filledFor, type ScaleId } from './scales';
 import { ScaleSwitch } from './scaleSwitch';
 import { MiniGrid } from './miniGrid';
 import { makePromotion } from './promotion';
+import { playTick, playChime, playPromote, setMuted, isMuted } from './audio';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
@@ -116,11 +117,29 @@ if (initEl) {
 // freeze 状態の PAUSED オーバーレイ
 const pausedEl = document.getElementById('paused-overlay');
 
+// サウンド toggle インジケータ (右下、フッターの上)
+const soundIndicator = document.createElement('div');
+soundIndicator.className = 'sound-indicator';
+soundIndicator.title = 'S キーでオンオフ';
+document.body.appendChild(soundIndicator);
+function refreshSoundIndicator(): void {
+  soundIndicator.textContent = isMuted() ? '♪ MUTED' : '♪ ON';
+  soundIndicator.classList.toggle('on', !isMuted());
+}
+refreshSoundIndicator();
+soundIndicator.addEventListener('click', () => {
+  setMuted(!isMuted());
+  refreshSoundIndicator();
+});
+
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
     e.preventDefault();
     clock.toggleFreeze();
     pausedEl?.classList.toggle('show', clock.frozen);
+  } else if (e.code === 'KeyS') {
+    setMuted(!isMuted());
+    refreshSoundIndicator();
   }
 });
 
@@ -198,9 +217,14 @@ function checkBoundaries(virtualMs: number, now: number): void {
   const dayBucket = Math.floor(virtualMs / 86_400_000);
   if (prevCycleBucket >= 0 && cycleBucket > prevCycleBucket) {
     grid.triggerHourBoundary(now); // collapse 発火 (名前は legacy)
+    playChime();
     // 階層昇格フライト: collapse 完了 + afterglow と並行して、上位バッジへ飛ばす
     const targetId = PROMOTE_TARGET[currentScaleId];
-    if (targetId) startPromotion(targetId, now + 1300 * animSlow); // collapse 完了直後に発射
+    if (targetId) {
+      startPromotion(targetId, now + 1300 * animSlow);
+      // promotion 発射時に上昇音 (collapse 完了直後)
+      setTimeout(() => playPromote(), 1300 * animSlow);
+    }
   }
   if (prevDayBucket >= 0 && dayBucket > prevDayBucket) {
     grid.triggerDayBoundary(now);
@@ -210,13 +234,19 @@ function checkBoundaries(virtualMs: number, now: number): void {
 }
 
 // 自スケール内の「マス完了」 = 上位スケールの「マス 1 個分前進」。
-// 上位バッジを微かに脈動させて連鎖感を出す。
+// 上位バッジを微かに脈動させ、軽い tick 音 + 触感を発火する (連鎖感)。
 let prevFilledFloor = -1;
+const isCoarseDevice = window.matchMedia('(pointer: coarse)').matches;
 function checkCellComplete(filled: number): void {
   const intFilled = Math.floor(filled);
   if (prevFilledFloor >= 0 && intFilled > prevFilledFloor) {
     const targetId = PROMOTE_TARGET[currentScaleId];
     if (targetId) scaleSwitch.microPulse(targetId);
+    playTick();
+    // mobile/touch では軽い触感 (15ms)
+    if (isCoarseDevice && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(15);
+    }
   }
   prevFilledFloor = intFilled;
 }
