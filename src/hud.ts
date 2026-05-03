@@ -8,6 +8,7 @@ export class Hud {
   private elapsedEl: HTMLDivElement;
   private subEl: HTMLDivElement;
   private jstEl: HTMLDivElement;
+  private countdownEl: HTMLDivElement;
   private debugEl: HTMLDivElement;
   private hintEl: HTMLDivElement;
   private hintTimer: number | null = null;
@@ -31,6 +32,10 @@ export class Hud {
     this.jstEl = document.createElement('div');
     this.jstEl.className = 'hud-jst';
     this.wrap.appendChild(this.jstEl);
+
+    this.countdownEl = document.createElement('div');
+    this.countdownEl.className = 'hud-countdown';
+    this.wrap.appendChild(this.countdownEl);
 
     this.debugEl = document.createElement('div');
     this.debugEl.className = 'hud-debug';
@@ -94,6 +99,34 @@ export class Hud {
   setDebug(text: string): void {
     this.debugEl.textContent = text;
   }
+
+  /** countdown モード時の残時間表示。null で非表示。 */
+  setCountdown(targetDate: Date | null): void {
+    if (!targetDate) {
+      this.countdownEl.textContent = '';
+      return;
+    }
+    const remaining = targetDate.getTime() - Date.now();
+    if (remaining <= 0) {
+      this.countdownEl.textContent = `→ ${formatTargetDate(targetDate)} · REACHED`;
+      return;
+    }
+    const totalSec = Math.floor(remaining / 1000);
+    const days = Math.floor(totalSec / 86400);
+    const hours = Math.floor(totalSec / 3600) % 24;
+    const mins = Math.floor(totalSec / 60) % 60;
+    const secs = totalSec % 60;
+    const parts = [];
+    if (days > 0) parts.push(`${days}D`);
+    if (days > 0 || hours > 0) parts.push(`${pad(hours)}H`);
+    parts.push(`${pad(mins)}M`);
+    parts.push(`${pad(secs)}S`);
+    this.countdownEl.textContent = `→ ${formatTargetDate(targetDate)} · ${parts.join(' ')} 残`;
+  }
+}
+
+function formatTargetDate(d: Date): string {
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
 }
 
 function pad(n: number): string {

@@ -54,6 +54,7 @@ function initApp(): void {
 
   // ===== 3. 状態 =====
   let clock: VirtualClock | undefined;
+  let activeOrigin: Origin | undefined;
   let progressiveUnlock = false;
   let prevCycleBucket = -1;
   let prevDayBucket = -1;
@@ -281,6 +282,9 @@ function initApp(): void {
     if (upperId) miniGrid.setFilled(filledFor(SCALES[upperId], virtualMs));
     grid.render(now);
     hud.update(virtualMs, speed, clock.frozen);
+    if (activeOrigin?.mode === 'countdown') {
+      hud.setCountdown(activeOrigin.date);
+    }
     maybeUpdateTitle();
     requestAnimationFrame(tick);
   }
@@ -295,12 +299,16 @@ function initApp(): void {
       const init = new InitScreen(document.body);
       origin = await init.show();
       warmupAudio(); // BEGIN クリックの user gesture で AudioContext を resume
+      const u = new URL(location.href);
       if (origin.mode === 'custom') {
-        const u = new URL(location.href);
         u.searchParams.set('since', formatDateForUrl(origin.date));
+        window.history.replaceState({}, '', u);
+      } else if (origin.mode === 'countdown') {
+        u.searchParams.set('until', formatDateForUrl(origin.date));
         window.history.replaceState({}, '', u);
       }
     }
+    activeOrigin = origin;
     start(origin);
   }
 

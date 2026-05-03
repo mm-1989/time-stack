@@ -511,6 +511,17 @@ body::after {
   color: rgba(0, 245, 255, 0.4);
 }
 
+.hud-countdown {
+  margin-top: 8px;
+  font: 500 12px/1.3 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.14em;
+  color: var(--tron-orange);
+  text-shadow: 0 0 10px rgba(255, 122, 0, 0.4);
+}
+.hud-countdown:empty {
+  display: none;
+}
+
 /* 実時間モードでは経過時間 = JST 壁時計が同値なので JST 行を隠して情報密度を下げる */
 .hud-realtime .hud-jst {
   display: none;
