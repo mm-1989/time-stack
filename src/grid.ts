@@ -691,12 +691,12 @@ export class TimeGrid {
 
     ctx.save();
     ctx.strokeStyle = 'rgba(0, 245, 255, 1)';
-    ctx.lineWidth = 0.5 * this.dpr;
+    ctx.lineWidth = 0.6 * this.dpr;
     // 縦線
     for (let x = cx % step; x < W; x += step) {
       const dist = Math.abs(x - cx);
-      const a = 0.06 * (1 - Math.min(1, dist / maxDist));
-      ctx.globalAlpha = Math.max(0.012, a);
+      const a = 0.14 * (1 - Math.min(1, dist / maxDist));
+      ctx.globalAlpha = Math.max(0.025, a);
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, H);
@@ -705,8 +705,8 @@ export class TimeGrid {
     // 横線
     for (let y = cy % step; y < H; y += step) {
       const dist = Math.abs(y - cy);
-      const a = 0.06 * (1 - Math.min(1, dist / maxDist));
-      ctx.globalAlpha = Math.max(0.012, a);
+      const a = 0.14 * (1 - Math.min(1, dist / maxDist));
+      ctx.globalAlpha = Math.max(0.025, a);
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(W, y);

@@ -42,6 +42,53 @@ canvas {
   height: 100%;
 }
 
+/* TRON UI 装飾: 4 隅の L 字マーク */
+.corner {
+  position: fixed;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--tron-line-strong);
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  animation: corner-fade-in 1.4s ease 0.4s forwards;
+}
+.corner-tl {
+  top: 14px;
+  left: 14px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.corner-tr {
+  top: 14px;
+  right: 14px;
+  border-left: 0;
+  border-bottom: 0;
+}
+.corner-bl {
+  bottom: 14px;
+  left: 14px;
+  border-right: 0;
+  border-top: 0;
+}
+.corner-br {
+  bottom: 14px;
+  right: 14px;
+  border-left: 0;
+  border-top: 0;
+}
+@keyframes corner-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 640px) {
+  .corner {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 /* ---------- HUD: 左上の主表示 ---------- */
 .hud {
   position: fixed;
