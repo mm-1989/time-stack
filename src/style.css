@@ -352,9 +352,10 @@ body::after {
   transition: transform 280ms cubic-bezier(0.2, 0.7, 0.3, 1);
   pointer-events: none;
 }
-.scale-btn[data-scale="minute"] { --btn-color: #fff5d0; }
-.scale-btn[data-scale="hour"] { --btn-color: #f2c879; }
-.scale-btn[data-scale="day"] { --btn-color: #b48b5a; }
+.scale-btn[data-scale="minute"] { --btn-color: #00f5ff; }
+.scale-btn[data-scale="hour"] { --btn-color: #4ad8ff; }
+.scale-btn[data-scale="day"] { --btn-color: #ff7a00; }
+.scale-btn[data-scale="week"] { --btn-color: #ff4a00; }
 .scale-btn:hover {
   color: var(--tron-cyan);
   background: rgba(0, 245, 255, 0.04);

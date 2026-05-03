@@ -59,6 +59,9 @@ export class TimeGrid {
   // 階層昇格フライト (promotion): 集約された 1 単位が上位スケールバッジへ飛んでいく
   private promotions: PromotionFlight[] = [];
 
+  // 進行中マスの位置 (crosshair 描画用、毎フレーム renderGrid で更新)
+  private currentMarkerPos: { cx: number; cy: number; halfW: number; halfH: number; color: string } | null = null;
+
   // すべての演出 duration に掛かる倍率。?animSlow=N で N 倍にスローモー化 (デフォルト 1)
   private animSlow = 1;
 
@@ -289,8 +292,37 @@ export class TimeGrid {
     this.drawBoundaryEffects(W, H, now);
   }
 
+  private drawCrosshair(W: number, H: number): void {
+    if (!this.currentMarkerPos) return;
+    const { ctx } = this;
+    const { cx, cy, halfW, halfH, color } = this.currentMarkerPos;
+    const gap = Math.max(halfW, halfH) + 6 * this.dpr; // マスの境界から少し離れた位置で線をカット
+    ctx.save();
+    ctx.strokeStyle = alphaCol(color, 0.16);
+    ctx.lineWidth = 1 * this.dpr;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 5 * this.dpr;
+    // 縦線 (マス上下を避けて画面上端・下端まで)
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, cy - gap);
+    ctx.moveTo(cx, cy + gap);
+    ctx.lineTo(cx, H);
+    ctx.stroke();
+    // 横線
+    ctx.beginPath();
+    ctx.moveTo(0, cy);
+    ctx.lineTo(cx - gap, cy);
+    ctx.moveTo(cx + gap, cy);
+    ctx.lineTo(W, cy);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   private drawBoundaryEffects(W: number, H: number, now: number): void {
     const { ctx } = this;
+    // crosshair (照準線): 進行中マスを画面中央十字で示す TRON UI 風マーカー
+    this.drawCrosshair(W, H);
 
     // collapse 完了後の余韻: 中央に小さい光点が広がりフェード
     const at = (now - this.afterglowStart) / this.ms(TimeGrid.AFTERGLOW_MS);
@@ -398,6 +430,9 @@ export class TimeGrid {
     let currentRender: null | {
       cellCx: number; cellCy: number; tx: number; ty: number; scale: number; alpha: number;
     } = null;
+    // 進行中マスの位置を保存 (crosshair 描画用)。renderGrid 終了後に drawBoundaryEffects
+    // が描画できるよう this.currentMarkerPos に格納。
+    this.currentMarkerPos = null;
 
     for (let i = 0; i < N; i++) {
       const r = Math.floor(i / cols);
@@ -453,6 +488,14 @@ export class TimeGrid {
       // idle 時の進行中マスは保留して最後に描画 (boost は entry アニメに従う)
       if (phase === 'idle' && i === intFilled) {
         currentRender = { cellCx, cellCy, tx, ty, scale: scale * dynamicBoost, alpha };
+        // crosshair 描画用にマス中心を記録 (boost 込みのサイズも残す)
+        this.currentMarkerPos = {
+          cx: cellCx,
+          cy: cellCy,
+          halfW: (cellW * dynamicBoost) / 2,
+          halfH: (cellH * dynamicBoost) / 2,
+          color: opts.fillColor,
+        };
         continue;
       }
 

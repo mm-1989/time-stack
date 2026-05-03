@@ -32,15 +32,16 @@ const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId));
 grid.setAnimSlow(animSlow);
 const hud = new Hud(document.body);
 const miniGrid = new MiniGrid(document.body);
-const SCALE_INDEX: Record<ScaleId, number> = { minute: 0, hour: 1, day: 2 };
-const SCALE_AT_INDEX: ScaleId[] = ['minute', 'hour', 'day'];
+const SCALE_INDEX: Record<ScaleId, number> = { minute: 0, hour: 1, day: 2, week: 3 };
+const SCALE_AT_INDEX: ScaleId[] = ['minute', 'hour', 'day', 'week'];
 
 // スケール階層: 1 周期完了時にどのバッジへ promotion を飛ばすか
 // (changeScale / syncMiniScale より前に宣言する。const は TDZ なので順序重要)
 const PROMOTE_TARGET: Record<ScaleId, ScaleId | null> = {
   minute: 'hour',
   hour: 'day',
-  day: null, // 上位なし
+  day: 'week',
+  week: null, // 上位なし
 };
 
 const scaleSwitch = new ScaleSwitch(document.body, currentScaleId, (id) => {
@@ -309,11 +310,12 @@ function tick(now: number): void {
   grid.setFilled(filled, now);
   checkBoundaries(virtualMs, now);
   checkCellComplete(filled);
-  // 各バッジ進捗バーを更新 (B 案)。3 スケール独立に「自スケール内の進捗」を出す。
+  // 各バッジ進捗バーを更新 (B 案)。全スケール独立に「自スケール内の進捗」を出す。
   scaleSwitch.updateProgress({
     minute: filledFor(SCALES.minute, virtualMs) / SCALES.minute.count,
     hour: filledFor(SCALES.hour, virtualMs) / SCALES.hour.count,
     day: filledFor(SCALES.day, virtualMs) / SCALES.day.count,
+    week: filledFor(SCALES.week, virtualMs) / SCALES.week.count,
   });
   // ミニ上位ビュー更新 (A 案)
   const upperId = PROMOTE_TARGET[currentScaleId];
