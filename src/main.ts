@@ -7,6 +7,8 @@ import { ScaleSwitch } from './scaleSwitch';
 import { MiniGrid } from './miniGrid';
 import { makePromotion } from './promotion';
 import { playTick, playChime, playPromote, setMuted, isMuted } from './audio';
+import { InitScreen } from './initScreen';
+import { parseOriginFromUrl, initialMsForOrigin, formatDateForUrl, type Origin } from './origin';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
@@ -19,11 +21,38 @@ const params = new URL(location.href).searchParams;
 const speed = Math.max(0.1, parseFloat(params.get('speed') ?? '1'));
 // アニメ全体のスローモー倍率。?animSlow=4 で全演出が 4 倍ゆっくり。
 const animSlow = Math.max(0.1, parseFloat(params.get('animSlow') ?? '1'));
-// 起点は JST 本日 0:00:00。今が JST 12:30 なら 12 時間 30 分経過済みでスタート。
-// ?reset を付けると 0 から始まる (デバッグ用)。
+// 起点モード: ?since=YYYY-MM-DD があればそれを採用。?reset=now-only-bypass 用。
 const resetStart = params.has('reset');
-const initialVirtualMs = resetStart ? 0 : elapsedSinceJstMidnight(Date.now());
-const clock = new VirtualClock(speed, performance.now(), initialVirtualMs);
+
+// 起動: URL に ?since があれば直接、なければ InitScreen で起点を選ばせる。
+async function bootstrap(): Promise<void> {
+  let origin: Origin;
+  const urlOrigin = parseOriginFromUrl(new URL(location.href));
+  if (urlOrigin) {
+    origin = urlOrigin;
+  } else {
+    const init = new InitScreen(document.body);
+    origin = await init.show();
+    if (origin.mode === 'custom') {
+      // 選択結果を URL に反映 (リロードや共有しても同じ起点)
+      const u = new URL(location.href);
+      u.searchParams.set('since', formatDateForUrl(origin.date));
+      window.history.replaceState({}, '', u);
+    }
+  }
+  start(origin);
+}
+
+let clock: VirtualClock;
+
+function start(origin: Origin): void {
+  const initialVirtualMs = resetStart ? 0 : initialMsForOrigin(origin, Date.now());
+  clock = new VirtualClock(speed, performance.now(), initialVirtualMs);
+  // 起動 INIT オーバーレイを自動消去 (init 画面が出ていた場合は遅延スタート)
+  const initEl = document.getElementById('init-overlay');
+  if (initEl) setTimeout(() => initEl.classList.add('gone'), 1500);
+  requestAnimationFrame(tick);
+}
 
 // 初期表示は minute モード (1 秒で 1 マス動くので開始時から動きが見える)
 let currentScaleId: ScaleId = (params.get('scale') as ScaleId) ?? 'minute';
@@ -85,12 +114,6 @@ function fitCanvas(): void {
 fitCanvas();
 window.addEventListener('resize', fitCanvas);
 
-// 起動 INIT オーバーレイを自動消去 (animation 完了後 1.5s で DOM から削除)
-const initEl = document.getElementById('init-overlay');
-if (initEl) {
-  setTimeout(() => initEl.classList.add('gone'), 1500);
-}
-
 // freeze 状態の PAUSED オーバーレイ
 const pausedEl = document.getElementById('paused-overlay');
 
@@ -110,13 +133,16 @@ soundIndicator.addEventListener('click', () => {
 });
 
 window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyS') {
+    setMuted(!isMuted());
+    refreshSoundIndicator();
+    return;
+  }
+  if (!clock) return; // bootstrap (init 画面表示中) は時計関連を無視
   if (e.code === 'Space') {
     e.preventDefault();
     clock.toggleFreeze();
     pausedEl?.classList.toggle('show', clock.frozen);
-  } else if (e.code === 'KeyS') {
-    setMuted(!isMuted());
-    refreshSoundIndicator();
   }
 });
 
@@ -314,7 +340,7 @@ canvas.addEventListener('pointerleave', () => {
 
 // デバッグ: Shift + マスクリックで時刻スキップ。通常クリックは無効。
 canvas.addEventListener('click', (e) => {
-  if (!e.shiftKey) return; // 通常クリックは何もしない
+  if (!e.shiftKey || !clock) return;
   const idx = grid.hitTest(e.clientX, e.clientY);
   if (idx < 0) return;
   const period = SCALES[currentScaleId].periodMs;
@@ -330,6 +356,7 @@ canvas.addEventListener('click', (e) => {
 let introKicked = false;
 
 function tick(now: number): void {
+  if (!clock) return; // 未初期化なら何もしない (起動時の安全弁)
   if (!introKicked) {
     grid.kickIntro(now);
     introKicked = true;
@@ -356,4 +383,5 @@ function tick(now: number): void {
   maybeUpdateTitle();
   requestAnimationFrame(tick);
 }
-requestAnimationFrame(tick);
+
+bootstrap(); // ← 起動: init 画面 (or URL ?since 直接) → start() → tick

@@ -104,6 +104,148 @@ body::after {
   }
 }
 
+/* TRON: 起点選択画面 (起動時、URL に ?since が無いときのみ) */
+.init-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: init-screen-fade-in 0.4s ease forwards;
+}
+@keyframes init-screen-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.init-screen.gone {
+  animation: init-screen-fade-out 0.4s ease forwards;
+}
+@keyframes init-screen-fade-out {
+  to { opacity: 0; }
+}
+.init-panel {
+  background: rgba(0, 8, 18, 0.9);
+  border: 1px solid var(--tron-line-strong);
+  border-radius: 2px;
+  padding: 36px 44px;
+  min-width: 380px;
+  max-width: 90vw;
+  box-shadow: 0 0 60px rgba(0, 245, 255, 0.15);
+}
+.init-title {
+  font: 700 18px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--tron-cyan);
+  text-shadow: 0 0 12px rgba(0, 245, 255, 0.5);
+  margin-bottom: 28px;
+}
+.init-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.init-opt {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--tron-line);
+  border-radius: 2px;
+  padding: 14px 18px;
+  color: var(--tron-text-dim);
+  font-family: 'Space Grotesk', sans-serif;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.init-opt:hover {
+  color: var(--tron-cyan);
+  border-color: var(--tron-line-strong);
+  background: rgba(0, 245, 255, 0.04);
+}
+.init-opt.active {
+  color: var(--tron-cyan);
+  border-color: var(--tron-cyan);
+  background: rgba(0, 245, 255, 0.08);
+  box-shadow: 0 0 16px rgba(0, 245, 255, 0.2);
+}
+.init-opt-label {
+  font: 600 14px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.init-opt-sub {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.4);
+}
+.init-custom-input {
+  margin-bottom: 18px;
+  transition: opacity 0.2s ease, max-height 0.2s ease;
+  max-height: 80px;
+  overflow: hidden;
+  opacity: 1;
+}
+.init-custom-input.hidden {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+}
+.init-date {
+  width: 100%;
+  appearance: none;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--tron-line-strong);
+  border-radius: 2px;
+  padding: 10px 12px;
+  color: var(--tron-cyan);
+  font: 500 13px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  color-scheme: dark;
+}
+.init-date:focus {
+  outline: none;
+  border-color: var(--tron-cyan);
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.3);
+}
+.init-begin {
+  appearance: none;
+  width: 100%;
+  background: rgba(0, 245, 255, 0.1);
+  border: 1px solid var(--tron-cyan);
+  border-radius: 2px;
+  padding: 14px;
+  color: var(--tron-cyan);
+  font: 700 13px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.6);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.init-begin:hover {
+  background: rgba(0, 245, 255, 0.18);
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.4);
+}
+@media (max-width: 640px) {
+  .init-panel {
+    padding: 24px 20px;
+    min-width: 0;
+    width: calc(100vw - 40px);
+  }
+  .init-title {
+    font-size: 14px;
+    letter-spacing: 0.22em;
+  }
+}
+
 /* TRON: 起動 INIT オーバーレイ (auto fade-out) */
 .init-overlay {
   position: fixed;
