@@ -1,5 +1,5 @@
 import './style.css';
-import { VirtualClock, elapsedSinceJstMidnight } from './time';
+import { VirtualClock, elapsedSinceJstMidnight, formatJstClock } from './time';
 import { TimeGrid } from './grid';
 import { Hud } from './hud';
 import { SCALES, filledFor, type ScaleId } from './scales';
@@ -60,12 +60,22 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// タイトルバー同期: 1 秒に 1 回だけ document.title を更新 (タブが時計として機能)
+let lastTitleSec = -1;
+function maybeUpdateTitle(): void {
+  const wallSec = Math.floor(elapsedSinceJstMidnight(Date.now()) / 1000);
+  if (wallSec === lastTitleSec) return;
+  lastTitleSec = wallSec;
+  document.title = `${formatJstClock(Date.now())} · time-stack`;
+}
+
 function tick(now: number): void {
   const virtualMs = clock.tick(now);
   const filled = filledFor(SCALES[currentScaleId], virtualMs);
   grid.setFilled(filled);
   grid.render(now);
   hud.update(virtualMs, speed, clock.frozen);
+  maybeUpdateTitle();
   requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
