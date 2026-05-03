@@ -125,6 +125,11 @@ export class TimeGrid {
     this.promotions.push(flight);
   }
 
+  /** デバッグ用: 進行中の promotion 件数 */
+  get activePromotionCount(): number {
+    return this.promotions.length;
+  }
+
   /** スケール切替: OUT(旧グリッド) → IN(新グリッド) のアニメに入る */
   transitionTo(opts: GridOptions, now: number): void {
     if (this.mode !== 'idle') {

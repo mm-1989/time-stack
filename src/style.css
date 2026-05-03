@@ -91,6 +91,17 @@ canvas {
   display: none;
 }
 
+.hud-debug {
+  margin-top: 8px;
+  font: 400 10px/1.4 ui-monospace, monospace;
+  letter-spacing: 0.05em;
+  color: #f4a261;
+  white-space: pre-line;
+}
+.hud-debug:empty {
+  display: none;
+}
+
 .hud-legend {
   margin-top: 18px;
   display: flex;

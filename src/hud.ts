@@ -8,6 +8,7 @@ export class Hud {
   private elapsedEl: HTMLDivElement;
   private subEl: HTMLDivElement;
   private jstEl: HTMLDivElement;
+  private debugEl: HTMLDivElement;
   private hintEl: HTMLDivElement;
   private hintTimer: number | null = null;
 
@@ -27,6 +28,10 @@ export class Hud {
     this.jstEl = document.createElement('div');
     this.jstEl.className = 'hud-jst';
     this.wrap.appendChild(this.jstEl);
+
+    this.debugEl = document.createElement('div');
+    this.debugEl.className = 'hud-debug';
+    this.wrap.appendChild(this.debugEl);
 
     this.hintEl = document.createElement('div');
     this.hintEl.className = 'hud-hint';
@@ -80,6 +85,11 @@ export class Hud {
     // 実時間モードでは経過時間 = JST と等価なので非表示にして冗長を避ける。
     this.wrap.classList.toggle('hud-realtime', isRealtime);
     this.jstEl.textContent = `JST  ${formatJstClock(Date.now())}`;
+  }
+
+  /** デバッグ情報を画面左上に表示 (?debug クエリ用) */
+  setDebug(text: string): void {
+    this.debugEl.textContent = text;
   }
 }
 

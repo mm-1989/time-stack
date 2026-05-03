@@ -125,14 +125,31 @@ function checkBoundaries(virtualMs: number, now: number): void {
   prevDayBucket = dayBucket;
 }
 
-// デバッグ: ?debug=promotion で起動後に promotion を強制発火 (キャプチャ用)
-// Playwright の wait と組み合わせて飛行中盤を撮影できる。animSlow と組み合わせるとさらに確実。
+// デバッグ: ?debug=promotion で起動 200ms 後に promotion を強制発火 (キャプチャ用)
+// 発射タイミングは固定。飛行 duration のみ animSlow を反映するので、wait を長めに取れば
+// 確実に飛行中盤を撮影できる。
 const debug = params.get('debug');
 if (debug === 'promotion') {
   const targetId = PROMOTE_TARGET[currentScaleId];
   if (targetId) {
-    setTimeout(() => startPromotion(targetId, performance.now()), 200 * animSlow);
+    setTimeout(() => {
+      startPromotion(targetId, performance.now());
+      // 観測ヘルパー: HUD に「flight 件数」と発射時刻を表示
+      hud.setDebug(`promotion fired @ ${Math.round(performance.now())}ms`);
+    }, 200);
   }
+}
+
+// デバッグ: ?debug=promotion 時、毎フレーム grid.promotions の数を HUD に表示
+if (debug === 'promotion') {
+  setInterval(() => {
+    const n = grid.activePromotionCount;
+    const t = scaleSwitch.getButtonCenter('hour');
+    hud.setDebug(
+      `flights=${n}` +
+        (t ? ` target=(${Math.round(t.x)},${Math.round(t.y)})` : ' target=null'),
+    );
+  }, 100);
 }
 
 function tick(now: number): void {
