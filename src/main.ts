@@ -202,6 +202,21 @@ if (debug === 'promotion') {
   }, 100);
 }
 
+// R6 マウス追随視差: canvas が pointer 位置に応じて微小シフト (立体感)。
+// pointer:coarse (タッチデバイス) では無効。
+const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+if (!isCoarse) {
+  window.addEventListener(
+    'pointermove',
+    (e) => {
+      const nx = (e.clientX / window.innerWidth - 0.5) * 2; // -1..1
+      const ny = (e.clientY / window.innerHeight - 0.5) * 2;
+      canvas.style.transform = `translate3d(${nx * 6}px, ${ny * 4}px, 0)`;
+    },
+    { passive: true },
+  );
+}
+
 // ホバーツールチップ: マスにマウスを当てるとそのマスが代表する時刻範囲を表示
 const tooltipEl = document.createElement('div');
 tooltipEl.className = 'cell-tooltip';
