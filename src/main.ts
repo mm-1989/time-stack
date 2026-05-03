@@ -114,6 +114,42 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// R10 Easter Egg: Konami code で TRON 起動メッセージ + 全スケールへ promotion を一気に発火
+const KONAMI = [
+  'ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown',
+  'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight',
+  'KeyB', 'KeyA',
+];
+let konamiBuf: string[] = [];
+window.addEventListener('keydown', (e) => {
+  konamiBuf.push(e.code);
+  if (konamiBuf.length > KONAMI.length) konamiBuf.shift();
+  if (konamiBuf.length === KONAMI.length && konamiBuf.every((k, i) => k === KONAMI[i])) {
+    konamiBuf = [];
+    triggerEasterEgg();
+  }
+});
+
+function triggerEasterEgg(): void {
+  // メッセージ overlay
+  const msg = document.createElement('div');
+  msg.className = 'tron-message';
+  msg.textContent = '> IDENTITY DISC ACTIVATED';
+  document.body.appendChild(msg);
+  setTimeout(() => msg.classList.add('show'), 30);
+  setTimeout(() => msg.classList.remove('show'), 2400);
+  setTimeout(() => msg.remove(), 3200);
+
+  // 全スケールへ順次 promotion 発火 (連鎖感)
+  const now = performance.now();
+  for (let i = 0; i < 3; i++) {
+    const target: ScaleId = (['hour', 'day', 'minute'] as ScaleId[])[i];
+    setTimeout(() => startPromotion(target, performance.now()), 200 + i * 250);
+  }
+  // grid を再展開
+  grid.kickIntro(now);
+}
+
 // タイトルバー同期: 1 秒に 1 回だけ document.title を更新 (タブが時計として機能)
 let lastTitleSec = -1;
 function maybeUpdateTitle(): void {

@@ -549,16 +549,17 @@ export class TimeGrid {
           roundRect(ctx, x, y, w, h, r);
           ctx.fill();
           ctx.restore();
-          // 2) 外側に広がる波紋リング (半径は控えめにして隣接マスを侵さない範囲で)
+          // 2) 外側に広がる矩形ウェーブ (TRON: 円ではなく rectangle で電子回路風)
           const eased = 1 - Math.pow(1 - t, 3);
-          const baseR = Math.min(w, h) * 0.5;
-          const ringR = baseR + Math.max(w, h) * 0.45 * eased;
+          const expand = Math.max(w, h) * 0.7 * eased;
+          const ringW = w + expand;
+          const ringH = h + expand;
           ctx.save();
           ctx.strokeStyle = alphaCol(fillColor, (1 - t) * 0.55);
           ctx.lineWidth = (1.2 + (1 - t) * 1.8) * this.dpr;
-          ctx.beginPath();
-          ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
-          ctx.stroke();
+          ctx.shadowColor = fillColor;
+          ctx.shadowBlur = 10 * this.dpr;
+          ctx.strokeRect(cx - ringW / 2, cy - ringH / 2, ringW, ringH);
           ctx.restore();
         }
       }

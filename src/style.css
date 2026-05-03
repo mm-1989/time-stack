@@ -50,7 +50,7 @@ canvas {
   }
 }
 
-/* TRON: CRT 風スキャンライン (全画面に薄い水平線パターン) */
+/* TRON: 静止スキャンライン (全画面に薄い水平線パターン) */
 body::before {
   content: '';
   position: fixed;
@@ -66,9 +66,74 @@ body::before {
   );
   mix-blend-mode: screen;
 }
+
+/* TRON: 動くスキャンライン (CRT 走査線、上から下へゆっくり) */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 47%,
+    rgba(0, 245, 255, 0.08) 50%,
+    transparent 53%,
+    transparent 100%
+  );
+  background-size: 100% 220px;
+  background-repeat: no-repeat;
+  animation: scanline-sweep 7s linear infinite;
+  mix-blend-mode: screen;
+}
+@keyframes scanline-sweep {
+  0% {
+    background-position: 0 -220px;
+  }
+  100% {
+    background-position: 0 100vh;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  body::before {
+  body::before,
+  body::after {
     background: none;
+    animation: none;
+  }
+}
+
+/* TRON: イースターエッグ メッセージ overlay */
+.tron-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
+  color: var(--tron-cyan);
+  font: 700 28px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  text-shadow: 0 0 16px rgba(0, 245, 255, 0.7), 0 0 32px rgba(0, 245, 255, 0.4);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 24px 36px;
+  border: 1px solid var(--tron-line-strong);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  white-space: nowrap;
+}
+.tron-message.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+@media (max-width: 640px) {
+  .tron-message {
+    font-size: 16px;
+    padding: 16px 20px;
+    letter-spacing: 0.18em;
   }
 }
 
