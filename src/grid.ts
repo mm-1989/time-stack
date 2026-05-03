@@ -219,10 +219,11 @@ export class TimeGrid {
     const W = this.canvas.width;
     const H = this.canvas.height;
 
-    // 背景
+    // 背景 (TRON: 完全黒に近い、わずかに上が青み)
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#0a0e1c');
-    g.addColorStop(1, '#02030a');
+    g.addColorStop(0, '#020812');
+    g.addColorStop(0.6, '#000000');
+    g.addColorStop(1, '#000000');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
@@ -357,7 +358,8 @@ export class TimeGrid {
     const gap = Math.max(2, Math.min(areaW / cols, areaH / rows) * 0.12);
     const cellW = (areaW - gap * (cols - 1)) / cols;
     const cellH = (areaH - gap * (rows - 1)) / rows;
-    const radius = Math.min(cellW, cellH) * 0.18;
+    // TRON: マスの角丸はほぼ無し (シャープな矩形)
+    const radius = Math.min(cellW, cellH) * 0.04;
 
     const N = opts.count;
     const intFilled = Math.floor(filled);
@@ -480,27 +482,25 @@ export class TimeGrid {
     const { ctx } = this;
     const isFilled = idx < intFilled;
     const isCurrent = idx === intFilled;
-    const isPreview = idx === intFilled + 1; // 次に塗られるマス (予告)
+    const isPreview = idx === intFilled + 1;
     const fillColor = opts.fillColor;
 
-    // 枠線 (preview は中間の輝度)
-    let strokeAlpha = 0.06;
-    if (isFilled || isCurrent) strokeAlpha = 0.18;
-    else if (isPreview) strokeAlpha = 0.14;
-    ctx.strokeStyle = `rgba(255,255,255,${strokeAlpha})`;
-    ctx.lineWidth = 1 * this.dpr;
-    roundRect(ctx, x, y, w, h, r);
-    ctx.stroke();
+    // TRON: 全マス共通で「線」が主役。塗りは控えめ、線の輝度で状態を表す。
+    if (!isFilled && !isCurrent && !isPreview) {
+      // 未塗マス: 細い淡い線のみ
+      ctx.strokeStyle = 'rgba(0, 245, 255, 0.10)';
+      ctx.lineWidth = 1 * this.dpr;
+      roundRect(ctx, x, y, w, h, r);
+      ctx.stroke();
+    }
 
-    // Preview: 次に塗られるマスを「予告」として、薄い fillColor 枠 + ごく薄い塗りで示す
+    // Preview: 次に塗られる予告枠 (中間輝度)
     if (isPreview) {
       ctx.save();
-      // ごく薄い塗り (進行中マスとの差を保つ)
       ctx.fillStyle = alphaCol(fillColor, 0.04);
       roundRect(ctx, x, y, w, h, r);
       ctx.fill();
-      // 細い予告枠線 (進行中の glow より控えめ)
-      ctx.strokeStyle = alphaCol(fillColor, 0.20);
+      ctx.strokeStyle = alphaCol(fillColor, 0.35);
       ctx.lineWidth = 1 * this.dpr;
       roundRect(ctx, x, y, w, h, r);
       ctx.stroke();
@@ -508,12 +508,18 @@ export class TimeGrid {
     }
 
     if (isFilled) {
-      const g = ctx.createLinearGradient(x, y, x, y + h);
-      g.addColorStop(0, fillColor);
-      g.addColorStop(1, shade(fillColor, -0.25));
-      ctx.fillStyle = g;
+      // TRON 塗り済みマス: 内部はごく薄い fill + 強い線 + glow
+      ctx.save();
+      ctx.fillStyle = alphaCol(fillColor, 0.10);
       roundRect(ctx, x, y, w, h, r);
       ctx.fill();
+      ctx.shadowColor = fillColor;
+      ctx.shadowBlur = 6 * this.dpr;
+      ctx.strokeStyle = alphaCol(fillColor, 0.85);
+      ctx.lineWidth = 1.2 * this.dpr;
+      roundRect(ctx, x, y, w, h, r);
+      ctx.stroke();
+      ctx.restore();
       // 完了直後のマス: 短いハイライト + 外側に広がる波紋リング
       const flashStart = this.completedFlashes.get(idx);
       if (flashStart !== undefined) {
@@ -672,11 +678,15 @@ export class TimeGrid {
   private drawHeaderLabel(W: number, _H: number, opts: GridOptions): void {
     const { ctx } = this;
     ctx.save();
-    ctx.fillStyle = '#7a8398';
-    ctx.font = `${12 * this.dpr}px ui-monospace, "SF Mono", monospace`;
+    ctx.fillStyle = 'rgba(0, 245, 255, 0.45)';
+    ctx.font = `500 ${11 * this.dpr}px "JetBrains Mono", ui-monospace, monospace`;
     ctx.textBaseline = 'top';
     ctx.textAlign = 'center';
-    ctx.fillText(opts.scaleLabel.toUpperCase(), W / 2, this.canvas.height * 0.06);
+    ctx.shadowColor = 'rgba(0, 245, 255, 0.5)';
+    ctx.shadowBlur = 6 * this.dpr;
+    // letter-spacing 風 (charsep を手動で広げる)
+    const text = opts.scaleLabel.toUpperCase();
+    ctx.fillText(text, W / 2, this.canvas.height * 0.06);
     ctx.restore();
   }
 
@@ -685,20 +695,27 @@ export class TimeGrid {
     filled: number, N: number, color: string,
   ): void {
     const { ctx } = this;
-    const barH = 2 * this.dpr;
+    const barH = 1 * this.dpr;
     const y = this.canvas.height - padBot * 0.55;
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    // 背景レール (細く、ほぼ透明)
+    ctx.fillStyle = 'rgba(0, 245, 255, 0.08)';
     ctx.fillRect(areaX, y, areaW, barH);
+    // 進捗 (発光)
     const ratio = filled / N;
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8 * this.dpr;
     ctx.fillStyle = color;
     ctx.fillRect(areaX, y, areaW * ratio, barH);
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = `${11 * this.dpr}px ui-monospace, monospace`;
+    ctx.restore();
+    // テキスト (etched)
+    ctx.fillStyle = 'rgba(0, 245, 255, 0.35)';
+    ctx.font = `500 ${10 * this.dpr}px "JetBrains Mono", ui-monospace, monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(`${filled.toFixed(2)} / ${N}`, areaX, y + 8 * this.dpr);
+    ctx.fillText(`${filled.toFixed(2)} / ${N}`, areaX, y + 10 * this.dpr);
     ctx.textAlign = 'right';
-    ctx.fillText(`${(ratio * 100).toFixed(1)}%`, areaX + areaW, y + 8 * this.dpr);
+    ctx.fillText(`${(ratio * 100).toFixed(1)}%`, areaX + areaW, y + 10 * this.dpr);
     void W;
   }
 }

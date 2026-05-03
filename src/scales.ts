@@ -30,7 +30,7 @@ export const SCALES: Record<ScaleId, Scale> = {
     periodMs: 60_000,
     label: '1 minute · 60 seconds',
     shortLabel: '1 min',
-    fillColor: '#fff5d0',
+    fillColor: '#00f5ff', // TRON cyan (sharp neon)
     subdivisions: 0, // < 1 秒は人間の認知粒度を超えるので粒子なし
     unit: 's',
   },
@@ -41,7 +41,7 @@ export const SCALES: Record<ScaleId, Scale> = {
     periodMs: 3_600_000,
     label: '1 hour · 60 minutes',
     shortLabel: '1 hour',
-    fillColor: '#f2c879',
+    fillColor: '#4ad8ff', // TRON deep cyan
     subdivisions: 60, // 1 分マス内に 60 秒粒子
     unit: 'm',
   },
@@ -52,7 +52,7 @@ export const SCALES: Record<ScaleId, Scale> = {
     periodMs: 86_400_000,
     label: '1 day · 24 hours',
     shortLabel: '1 day',
-    fillColor: '#b48b5a',
+    fillColor: '#ff7a00', // TRON orange accent (top of hierarchy)
     subdivisions: 60, // 1 時間マス内に 60 分粒子
     unit: 'h',
   },
