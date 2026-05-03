@@ -54,12 +54,29 @@ export class TimeGrid {
   // 階層昇格フライト (promotion): 集約された 1 単位が上位スケールバッジへ飛んでいく
   private promotions: PromotionFlight[] = [];
 
+  // すべての演出 duration に掛かる倍率。?animSlow=N で N 倍にスローモー化 (デフォルト 1)
+  private animSlow = 1;
+
   constructor(canvas: HTMLCanvasElement, opts: GridOptions) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('canvas 2d context unavailable');
     this.ctx = ctx;
     this.opts = opts;
+  }
+
+  setAnimSlow(multiplier: number): void {
+    this.animSlow = Math.max(0.1, multiplier);
+  }
+
+  /** スロー倍率を掛けた duration を返す。各 *_MS の代わりにこれを使う */
+  private ms(base: number): number {
+    return base * this.animSlow;
+  }
+
+  /** promotion duration をスロー倍率込みで取得 (main.ts から flight 生成時に使う) */
+  get scaledAnim(): number {
+    return this.animSlow;
   }
 
   setSize(cssW: number, cssH: number, dpr: number): void {
@@ -153,21 +170,19 @@ export class TimeGrid {
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
-    // モード遷移チェック
-    if (this.mode === 'out' && now - this.tStart >= OUT_MS) {
+    // モード遷移チェック (animSlow を掛けた duration で判定)
+    if (this.mode === 'out' && now - this.tStart >= this.ms(OUT_MS)) {
       this.mode = 'in';
       this.tStart = now;
     }
-    if (this.mode === 'in' && now - this.tStart >= IN_MS + this.staggerDuration()) {
+    if (this.mode === 'in' && now - this.tStart >= this.ms(IN_MS) + this.staggerDuration()) {
       this.mode = 'idle';
       this.prevOpts = null;
     }
-    if (this.mode === 'collapse' && now - this.tStart >= COLLAPSE_MS) {
+    if (this.mode === 'collapse' && now - this.tStart >= this.ms(COLLAPSE_MS)) {
       this.mode = 'idle';
-      // 集約完了後、新周期の最初のマスフラッシュは抑制 (即フラッシュは違和感)
       this.prevIntFilled = Math.floor(this.filled);
       this.completedFlashes.clear();
-      // afterglow を発火: 「1 周期分が中央に畳まれて 1 つの光点として残った」
       this.afterglowStart = now;
     }
 
@@ -208,7 +223,7 @@ export class TimeGrid {
     const { ctx } = this;
 
     // collapse 完了後の余韻: 中央に小さい光点が広がりフェード
-    const at = (now - this.afterglowStart) / TimeGrid.AFTERGLOW_MS;
+    const at = (now - this.afterglowStart) / this.ms(TimeGrid.AFTERGLOW_MS);
     if (at < 1 && at >= 0) {
       const cx = W / 2;
       const cy = H / 2;
@@ -236,7 +251,7 @@ export class TimeGrid {
 
     // 1 時間境界 (= 1 周期完了) は collapse mode が担当 (全マス中央集約)
     // 1 日境界: 中央から外へ広がるリセット波
-    const dt = (now - this.dayWaveStart) / TimeGrid.DAY_WAVE_MS;
+    const dt = (now - this.dayWaveStart) / this.ms(TimeGrid.DAY_WAVE_MS);
     if (dt < 1) {
       const cx = W / 2;
       const cy = H / 2;
@@ -268,8 +283,8 @@ export class TimeGrid {
   }
 
   private staggerDuration(): number {
-    // IN フェーズで、最後のマスの遅延分も含めた総時間
-    return Math.min(this.opts.count, 60) * 5;
+    // IN フェーズで、最後のマスの遅延分も含めた総時間 (animSlow 込み)
+    return Math.min(this.opts.count, 60) * 5 * this.animSlow;
   }
 
   private renderGrid(
@@ -309,7 +324,7 @@ export class TimeGrid {
       let alpha = 1;
 
       if (phase === 'out') {
-        const t = Math.min(1, (now - this.tStart) / OUT_MS);
+        const t = Math.min(1, (now - this.tStart) / this.ms(OUT_MS));
         const eased = easeInQuad(t);
         if (i === intFilled) {
           // 進行中マス: 中央へ引き寄せ + 拡大
@@ -324,9 +339,9 @@ export class TimeGrid {
           alpha = 1 - eased;
         }
       } else if (phase === 'in') {
-        // stagger: マス順で 0..(N-1)*5ms 遅延
-        const delay = i * 5;
-        const local = (now - this.tStart - delay) / IN_MS;
+        // stagger: マス順で 0..(N-1)*5ms 遅延 (animSlow 込み)
+        const delay = i * 5 * this.animSlow;
+        const local = (now - this.tStart - delay) / this.ms(IN_MS);
         const t = Math.max(0, Math.min(1, local));
         const eased = easeOutBack(t);
         // 中央から本来位置へ展開
@@ -341,7 +356,7 @@ export class TimeGrid {
         //   scale: linear (中盤までマスが半分以上残る)
         //   alpha: easeInQuad (前半は不透明を保ち、後半で一気に消える)
         // → t≈0.4 で「マスが少し中央寄り、まだ大きく見えている」絵が成立
-        const t = Math.min(1, (now - this.tStart) / COLLAPSE_MS);
+        const t = Math.min(1, (now - this.tStart) / this.ms(COLLAPSE_MS));
         const easedPos = easeInQuad(t);
         tx = cellCx + (screenCx - cellCx) * easedPos;
         ty = cellCy + (screenCy - cellCy) * easedPos;
@@ -418,7 +433,7 @@ export class TimeGrid {
       // 完了直後のマス: 短いハイライト + 外側に広がる波紋リング
       const flashStart = this.completedFlashes.get(idx);
       if (flashStart !== undefined) {
-        const t = (now - flashStart) / TimeGrid.FLASH_MS;
+        const t = (now - flashStart) / this.ms(TimeGrid.FLASH_MS);
         if (t >= 1) {
           this.completedFlashes.delete(idx);
         } else {

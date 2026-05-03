@@ -15,6 +15,8 @@ app.appendChild(canvas);
 
 const params = new URL(location.href).searchParams;
 const speed = Math.max(0.1, parseFloat(params.get('speed') ?? '1'));
+// アニメ全体のスローモー倍率。?animSlow=4 で全演出が 4 倍ゆっくり。
+const animSlow = Math.max(0.1, parseFloat(params.get('animSlow') ?? '1'));
 // 起点は JST 本日 0:00:00。今が JST 12:30 なら 12 時間 30 分経過済みでスタート。
 // ?reset を付けると 0 から始まる (デバッグ用)。
 const resetStart = params.has('reset');
@@ -25,6 +27,7 @@ let currentScaleId: ScaleId = (params.get('scale') as ScaleId) ?? 'day';
 if (!(currentScaleId in SCALES)) currentScaleId = 'day';
 
 const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId));
+grid.setAnimSlow(animSlow);
 const hud = new Hud(document.body);
 const scaleSwitch = new ScaleSwitch(document.body, currentScaleId, (id) => {
   currentScaleId = id;
@@ -100,7 +103,7 @@ function startPromotion(targetId: ScaleId, startTime: number): void {
       return { x: t.x * dpr, y: t.y * dpr };
     },
     onArrive: () => scaleSwitch.pulse(targetId),
-    duration: 800,
+    duration: 800 * animSlow,
   });
   grid.triggerPromotion(flight);
 }
@@ -113,7 +116,7 @@ function checkBoundaries(virtualMs: number, now: number): void {
     grid.triggerHourBoundary(now); // collapse 発火 (名前は legacy)
     // 階層昇格フライト: collapse 完了 + afterglow と並行して、上位バッジへ飛ばす
     const targetId = PROMOTE_TARGET[currentScaleId];
-    if (targetId) startPromotion(targetId, now + 1300); // collapse 完了直後に発射
+    if (targetId) startPromotion(targetId, now + 1300 * animSlow); // collapse 完了直後に発射
   }
   if (prevDayBucket >= 0 && dayBucket > prevDayBucket) {
     grid.triggerDayBoundary(now);
@@ -122,13 +125,13 @@ function checkBoundaries(virtualMs: number, now: number): void {
   prevDayBucket = dayBucket;
 }
 
-// デバッグ: ?debug=promotion で起動 200ms 後に promotion を強制発火 (キャプチャ用)
-// Playwright の wait と組み合わせて飛行中盤を撮影できる。
+// デバッグ: ?debug=promotion で起動後に promotion を強制発火 (キャプチャ用)
+// Playwright の wait と組み合わせて飛行中盤を撮影できる。animSlow と組み合わせるとさらに確実。
 const debug = params.get('debug');
 if (debug === 'promotion') {
   const targetId = PROMOTE_TARGET[currentScaleId];
   if (targetId) {
-    setTimeout(() => startPromotion(targetId, performance.now()), 200);
+    setTimeout(() => startPromotion(targetId, performance.now()), 200 * animSlow);
   }
 }
 
