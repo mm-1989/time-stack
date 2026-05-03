@@ -86,6 +86,11 @@ canvas {
   color: #5a6378;
 }
 
+/* 実時間モードでは経過時間 = JST 壁時計が同値なので JST 行を隠して情報密度を下げる */
+.hud-realtime .hud-jst {
+  display: none;
+}
+
 .hud-legend {
   margin-top: 18px;
   display: flex;

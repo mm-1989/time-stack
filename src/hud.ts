@@ -72,10 +72,13 @@ export class Hud {
       `<span class="d">${pad(sec)}</span>`;
     this.elapsedEl.classList.toggle('hud-frozen', frozen);
 
-    const speedTxt = speed === 1 ? '実時間' : `×${speed}`;
+    const isRealtime = Math.abs(speed - 1) < 0.001;
+    const speedTxt = isRealtime ? '実時間' : `×${speed}`;
     this.subEl.textContent = frozen ? `${speedTxt}  ⏸ FROZEN` : speedTxt;
 
-    // 壁時計 (JST 現在時刻): 起動オフセットの根拠を可視化
+    // 壁時計 (JST): 加速モードで経過時間と乖離する時のみ表示。
+    // 実時間モードでは経過時間 = JST と等価なので非表示にして冗長を避ける。
+    this.wrap.classList.toggle('hud-realtime', isRealtime);
     this.jstEl.textContent = `JST  ${formatJstClock(Date.now())}`;
   }
 }

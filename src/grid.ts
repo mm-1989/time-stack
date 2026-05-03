@@ -45,6 +45,10 @@ export class TimeGrid {
   private dayWaveStart = -Infinity;
   private static readonly DAY_WAVE_MS = 1800;
 
+  // collapse 完了後の余韻 (中央に小さい光点が残ってフェード) — 「1 周期 = 1 つに畳まれた」読み解きの完成
+  private afterglowStart = -Infinity;
+  private static readonly AFTERGLOW_MS = 700;
+
   constructor(canvas: HTMLCanvasElement, opts: GridOptions) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
@@ -153,6 +157,8 @@ export class TimeGrid {
       // 集約完了後、新周期の最初のマスフラッシュは抑制 (即フラッシュは違和感)
       this.prevIntFilled = Math.floor(this.filled);
       this.completedFlashes.clear();
+      // afterglow を発火: 「1 周期分が中央に畳まれて 1 つの光点として残った」
+      this.afterglowStart = now;
     }
 
     // ラベル: idle/in は新スケール、out は旧スケール
@@ -190,6 +196,31 @@ export class TimeGrid {
 
   private drawBoundaryEffects(W: number, H: number, now: number): void {
     const { ctx } = this;
+
+    // collapse 完了後の余韻: 中央に小さい光点が広がりフェード
+    const at = (now - this.afterglowStart) / TimeGrid.AFTERGLOW_MS;
+    if (at < 1 && at >= 0) {
+      const cx = W / 2;
+      const cy = H / 2;
+      const easedR = 1 - Math.pow(1 - at, 3); // easeOutCubic
+      const easedA = 1 - at * at; // 1 - easeInQuad → 前半は不透明
+      const radius = (8 + easedR * 90) * this.dpr;
+      ctx.save();
+      ctx.shadowColor = '#fff5d0';
+      ctx.shadowBlur = 50 * this.dpr;
+      ctx.fillStyle = `rgba(255, 245, 208, ${easedA * 0.55})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+      // 中心の鋭い芯
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = `rgba(255, 255, 255, ${easedA * 0.85})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, (3 + easedR * 8) * this.dpr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // 1 時間境界 (= 1 周期完了) は collapse mode が担当 (全マス中央集約)
     // 1 日境界: 中央から外へ広がるリセット波
     const dt = (now - this.dayWaveStart) / TimeGrid.DAY_WAVE_MS;
