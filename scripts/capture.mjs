@@ -32,10 +32,10 @@ const SCENARIOS = [
   // +20ms で集約の極初期 (マスが画面端に残りつつ中央へ動き出した瞬間)
   { name: '05-collapse', query: 'scale=hour&speed=86400&reset', wait: 60_020 },
   { name: '06-mobile-day', query: 'scale=day', wait: 1500, viewport: { width: 375, height: 812 } },
-  // promotion フライト中盤を狙う。animSlow=4 で飛行 duration が 800→3200ms。
-  // setTimeout は固定 200ms。wait 1800ms = setTimeout 発火後 ~1600ms = 飛行 50% 地点。
-  // ?debug=promotion で HUD にデバッグ情報も出る (flights 数 / target 座標)。
-  { name: '07-promotion', query: 'scale=minute&debug=promotion&animSlow=4', wait: 1800, waitUntil: 'domcontentloaded' },
+  // promotion 飛行中盤を狙う。animSlow=4 で飛行 duration が 800→3200ms。
+  // setTimeout 200ms。wait 1300ms = setTimeout 発火後 1100ms = 飛行 ~34% 地点 = 軌道中央付近で
+  // 弧の頂点を撮れる。
+  { name: '07-promotion', query: 'scale=minute&debug=promotion&animSlow=4', wait: 1300, waitUntil: 'domcontentloaded' },
 ];
 
 function buildUrl(query) {

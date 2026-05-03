@@ -43,6 +43,11 @@ export class TimeGrid {
   private prevIntFilled = -1;
   private static readonly FLASH_MS = 700;
 
+  // アクティブセルが進行中入りした時刻 (フワッと拡大アニメに使う)
+  private currentEntryStart = -Infinity;
+  private currentEntryIdx = -1;
+  private static readonly ENTRY_MS = 420;
+
   // 時刻境界エフェクト
   private dayWaveStart = -Infinity;
   private static readonly DAY_WAVE_MS = 1800;
@@ -92,6 +97,11 @@ export class TimeGrid {
       // 整数マス境界をまたいだものをフラッシュ登録 (skip 等で複数同時もあり得る)
       for (let i = this.prevIntFilled; i < newInt; i++) {
         this.completedFlashes.set(i, now);
+      }
+      // 新しいアクティブセル (= newInt) のフワッと拡大アニメを起動
+      if (newInt !== this.prevIntFilled && newInt < this.opts.count) {
+        this.currentEntryStart = now;
+        this.currentEntryIdx = newInt;
       }
     }
     this.prevIntFilled = newInt;
@@ -317,7 +327,18 @@ export class TimeGrid {
 
     // 進行中マスは描画順を最後にして z 前面に。idle 時に scale boost (1.22 倍)
     // を加えて他マスとの差別化を図り「今ここ」を一目化する。
+    // 進行中入りした瞬間は scale 1.0 → 1.22 を easeOutBack でフワッと拡大 (entry アニメ)。
     const CURRENT_BOOST = 1.22;
+    let entryProgress = 1; // 1 = アニメ完了 (= boost フル適用)
+    if (
+      this.currentEntryIdx === intFilled &&
+      this.currentEntryStart > 0 &&
+      now - this.currentEntryStart < this.ms(TimeGrid.ENTRY_MS)
+    ) {
+      const t = (now - this.currentEntryStart) / this.ms(TimeGrid.ENTRY_MS);
+      entryProgress = easeOutBack(Math.max(0, Math.min(1, t)));
+    }
+    const dynamicBoost = 1 + (CURRENT_BOOST - 1) * entryProgress;
     let currentRender: null | {
       cellCx: number; cellCy: number; tx: number; ty: number; scale: number; alpha: number;
     } = null;
@@ -373,9 +394,9 @@ export class TimeGrid {
 
       if (scale <= 0.001 || alpha <= 0.001) continue;
 
-      // idle 時の進行中マスは保留して最後に描画
+      // idle 時の進行中マスは保留して最後に描画 (boost は entry アニメに従う)
       if (phase === 'idle' && i === intFilled) {
-        currentRender = { cellCx, cellCy, tx, ty, scale: scale * CURRENT_BOOST, alpha };
+        currentRender = { cellCx, cellCy, tx, ty, scale: scale * dynamicBoost, alpha };
         continue;
       }
 
