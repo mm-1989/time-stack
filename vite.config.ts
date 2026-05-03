@@ -7,4 +7,22 @@ export default defineConfig({
   build: {
     sourcemap: false,
   },
+  plugins: [
+    {
+      // ビルド時に <head> へ build-id meta を注入する。
+      // CI からは GITHUB_SHA、ローカルでは local-<timestamp> がセットされる。
+      // capture スクリプトはこの値を polling し、Pages CDN の伝播完了を意味的に確認する。
+      name: 'inject-build-id',
+      transformIndexHtml: {
+        order: 'post',
+        handler(html) {
+          const sha = process.env.GITHUB_SHA ?? `local-${Date.now()}`;
+          return html.replace(
+            '</head>',
+            `  <meta name="build-id" content="${sha}">\n  </head>`,
+          );
+        },
+      },
+    },
+  ],
 });
