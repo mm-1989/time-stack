@@ -158,6 +158,16 @@ export class TimeGrid {
     this.prevIntFilled = -1;
   }
 
+  /**
+   * 起動時のシネマ intro。OUT を skip して IN phase だけを再生し、
+   * マスが中央から stagger で展開する演出を起動の演出として使う。
+   */
+  kickIntro(now: number): void {
+    this.prevOpts = null;
+    this.mode = 'in';
+    this.tStart = now;
+  }
+
   /** 周期境界 (1 時間 = 1 周期完了): 60 マスを中央へ集約させて節目化 */
   triggerHourBoundary(now: number): void {
     // 既存の transition 中なら干渉を避けて何もしない

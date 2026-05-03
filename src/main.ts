@@ -244,7 +244,14 @@ canvas.addEventListener('pointerleave', () => {
   tooltipEl.classList.remove('show');
 });
 
+// 初回 tick で起動シネマ intro を発火 (mode='in' から開始)
+let introKicked = false;
+
 function tick(now: number): void {
+  if (!introKicked) {
+    grid.kickIntro(now);
+    introKicked = true;
+  }
   const virtualMs = clock.tick(now);
   lastVirtualMs = virtualMs;
   const filled = filledFor(SCALES[currentScaleId], virtualMs);
