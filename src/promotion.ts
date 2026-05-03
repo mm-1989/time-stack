@@ -53,17 +53,19 @@ export function drawPromotion(
   const target = flight.getTargetCanvasXY();
   if (!target) return false;
 
-  const e = 1 - Math.pow(1 - linearT, 3); // easeOutCubic
+  // 軌道の進行は線形 t を使う (easeOutCubic だと 50% 経過で軌道 87% 進んで
+  // バッジに被ってしまい、撮影タイミングと視覚的進行がズレる)
   const sx = flight.startX;
   const sy = flight.startY;
   const tx = target.x;
   const ty = target.y;
-  // 二次ベジエ。制御点を「sy と ty の中間 + 上空 80px」に置いて軌道を上に膨らませる
   const ctrlX = (sx + tx) / 2;
-  const ctrlY = Math.min(sy, ty) - 80 * dpr;
-  const omt = 1 - e;
-  const x = omt * omt * sx + 2 * omt * e * ctrlX + e * e * tx;
-  const y = omt * omt * sy + 2 * omt * e * ctrlY + e * e * ty;
+  const ctrlY = Math.min(sy, ty) - 100 * dpr;
+  const omt = 1 - linearT;
+  const x = omt * omt * sx + 2 * omt * linearT * ctrlX + linearT * linearT * tx;
+  const y = omt * omt * sy + 2 * omt * linearT * ctrlY + linearT * linearT * ty;
+  // ヘッドの縮小・透明化だけ easeOutCubic で「到着間際に消える」表現
+  const e = 1 - Math.pow(1 - linearT, 3);
 
   // trail 更新 (古いポイントを順次破棄)
   flight.trail.push({ x, y });
@@ -87,19 +89,19 @@ export function drawPromotion(
     ctx.restore();
   }
 
-  // ヘッド: 光点 (scale 1 → 0.4 で縮小)
-  const headScale = 1 - e * 0.6;
+  // ヘッド: 光点 (scale 1 → 0.5 で縮小)。視認性のためサイズ大きめ + 強い glow。
+  const headScale = 1 - e * 0.5;
   ctx.save();
   ctx.shadowColor = '#fff5d0';
-  ctx.shadowBlur = 30 * dpr;
-  ctx.fillStyle = `rgba(255, 245, 208, ${1 - e * 0.4})`;
+  ctx.shadowBlur = 40 * dpr;
+  ctx.fillStyle = `rgba(255, 245, 208, ${1 - e * 0.3})`;
   ctx.beginPath();
-  ctx.arc(x, y, 9 * dpr * headScale, 0, Math.PI * 2);
+  ctx.arc(x, y, 14 * dpr * headScale, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.fillStyle = `rgba(255, 255, 255, ${1 - e * 0.3})`;
+  ctx.fillStyle = `rgba(255, 255, 255, ${1 - e * 0.2})`;
   ctx.beginPath();
-  ctx.arc(x, y, 3.5 * dpr * headScale, 0, Math.PI * 2);
+  ctx.arc(x, y, 5 * dpr * headScale, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 

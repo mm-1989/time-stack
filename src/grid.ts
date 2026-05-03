@@ -315,6 +315,13 @@ export class TimeGrid {
     const screenCx = this.canvas.width / 2;
     const screenCy = this.canvas.height / 2;
 
+    // 進行中マスは描画順を最後にして z 前面に。idle 時に scale boost (1.22 倍)
+    // を加えて他マスとの差別化を図り「今ここ」を一目化する。
+    const CURRENT_BOOST = 1.22;
+    let currentRender: null | {
+      cellCx: number; cellCy: number; tx: number; ty: number; scale: number; alpha: number;
+    } = null;
+
     for (let i = 0; i < N; i++) {
       const r = Math.floor(i / cols);
       const c = i % cols;
@@ -356,11 +363,6 @@ export class TimeGrid {
         alpha = Math.min(1, t * 1.5);
       } else if (phase === 'collapse') {
         // 全マスが画面中央へ吸い込まれて scale 0 + alpha 0 へ。
-        // 「動きが見える瞬間を残す」ため、移動・scale・alpha の進行関数を分ける:
-        //   移動: easeInQuad (前半はゆっくり始まり、後半に中央へ吸い込まれる)
-        //   scale: linear (中盤までマスが半分以上残る)
-        //   alpha: easeInQuad (前半は不透明を保ち、後半で一気に消える)
-        // → t≈0.4 で「マスが少し中央寄り、まだ大きく見えている」絵が成立
         const t = Math.min(1, (now - this.tStart) / this.ms(COLLAPSE_MS));
         const easedPos = easeInQuad(t);
         tx = cellCx + (screenCx - cellCx) * easedPos;
@@ -371,10 +373,25 @@ export class TimeGrid {
 
       if (scale <= 0.001 || alpha <= 0.001) continue;
 
+      // idle 時の進行中マスは保留して最後に描画
+      if (phase === 'idle' && i === intFilled) {
+        currentRender = { cellCx, cellCy, tx, ty, scale: scale * CURRENT_BOOST, alpha };
+        continue;
+      }
+
       this.drawCellAt(
         cellCx, cellCy, cellW, cellH, radius,
         tx, ty, scale, alpha,
         i, intFilled, fracFilled, opts, now,
+      );
+    }
+
+    // 進行中マスを最前面に描画 (boost 込み)
+    if (currentRender) {
+      this.drawCellAt(
+        currentRender.cellCx, currentRender.cellCy, cellW, cellH, radius,
+        currentRender.tx, currentRender.ty, currentRender.scale, currentRender.alpha,
+        intFilled, intFilled, fracFilled, opts, now,
       );
     }
   }
@@ -548,7 +565,6 @@ export class TimeGrid {
 
     const subFilled = fracFilled * subs;
     const subInt = Math.floor(subFilled);
-    const subFrac = subFilled - subInt;
 
     for (let i = 0; i < subs; i++) {
       const r = Math.floor(i / subCols);
@@ -563,15 +579,21 @@ export class TimeGrid {
         ctx.arc(cx, cy, dotR, 0, Math.PI * 2);
         ctx.fill();
       } else if (i === subInt) {
-        // 進行中サブ粒子: フェードイン中 + 脈動
+        // 進行中サブ粒子: 大きく + 派手な脈動 + 中心の白い芯で「今ここ」を強調
         const pulse = 0.5 + 0.5 * Math.sin(now * 0.012);
-        const fadeAlpha = subFrac * (0.55 + pulse * 0.45);
+        const sz = dotR * (1.1 + pulse * 0.5);
         ctx.save();
         ctx.shadowColor = color;
-        ctx.shadowBlur = (3 + pulse * 5) * this.dpr;
-        ctx.fillStyle = alphaCol(color, fadeAlpha);
+        ctx.shadowBlur = (8 + pulse * 10) * this.dpr;
+        ctx.fillStyle = alphaCol(color, 0.7 + pulse * 0.3);
         ctx.beginPath();
-        ctx.arc(cx, cy, dotR * (0.7 + subFrac * 0.5), 0, Math.PI * 2);
+        ctx.arc(cx, cy, sz, 0, Math.PI * 2);
+        ctx.fill();
+        // 中心の白い芯
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = `rgba(255,255,255,${0.4 + pulse * 0.45})`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, sz * 0.4, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       } else {

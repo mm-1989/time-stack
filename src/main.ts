@@ -23,8 +23,9 @@ const resetStart = params.has('reset');
 const initialVirtualMs = resetStart ? 0 : elapsedSinceJstMidnight(Date.now());
 const clock = new VirtualClock(speed, performance.now(), initialVirtualMs);
 
-let currentScaleId: ScaleId = (params.get('scale') as ScaleId) ?? 'day';
-if (!(currentScaleId in SCALES)) currentScaleId = 'day';
+// 初期表示は minute モード (1 秒で 1 マス動くので開始時から動きが見える)
+let currentScaleId: ScaleId = (params.get('scale') as ScaleId) ?? 'minute';
+if (!(currentScaleId in SCALES)) currentScaleId = 'minute';
 
 const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId));
 grid.setAnimSlow(animSlow);
