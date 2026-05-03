@@ -21,7 +21,8 @@ type Mode = 'idle' | 'out' | 'in' | 'collapse';
 
 const OUT_MS = 380;
 const IN_MS = 520;
-const COLLAPSE_MS = 750;
+// 集約をじっくり見せる + Playwright waitForTimeout の ±200ms ジッタを吸収
+const COLLAPSE_MS = 1300;
 
 export class TimeGrid {
   private canvas: HTMLCanvasElement;
@@ -430,16 +431,19 @@ export class TimeGrid {
       ctx.restore();
 
       // 進行中マスの下に「N + unit」ラベル(例: 14h / 35m / 47s)
-      // 「グリッドだけ見て今どこか」を一目化する
+      // 「グリッドだけ見て今どこか」を一目化する。可読性重視で weight 700 + 白系。
       const unit = opts.unit;
       if (unit) {
-        const fontSize = Math.max(9, Math.min(18, Math.min(w, h) * 0.18));
+        const fontSize = Math.max(11, Math.min(20, Math.min(w, h) * 0.22));
         ctx.save();
-        ctx.fillStyle = alphaCol(fillColor, 0.85);
-        ctx.font = `500 ${fontSize}px ui-monospace, "SF Mono", Menlo, monospace`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+        ctx.font = `700 ${fontSize}px ui-monospace, "SF Mono", Menlo, monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText(`${idx}${unit}`, x + w / 2, y + h + 4 * this.dpr);
+        // 細い影でコントラスト確保
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+        ctx.shadowBlur = 6 * this.dpr;
+        ctx.fillText(`${idx}${unit}`, x + w / 2, y + h + 6 * this.dpr);
         ctx.restore();
       }
     }
