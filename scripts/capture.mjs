@@ -18,6 +18,10 @@ const BASE_URL = (process.env.BASE_URL ?? 'http://localhost:5173/time-stack/').r
 const OUT_DIR = process.env.OUT_DIR ?? './screenshots';
 const EXPECTED_SHA = process.env.EXPECTED_SHA ?? null;
 const POLL_TIMEOUT_MS = Number(process.env.POLL_TIMEOUT_MS ?? 300_000);
+// 音声 (WAV) 録音は重いため、明示トリガー時のみ。CI 側で audio.ts 変更や [audio]
+// タグや workflow_dispatch を検出して CAPTURE_AUDIO=1 を渡す。
+const CAPTURE_AUDIO = process.env.CAPTURE_AUDIO === '1';
+const CAPTURE_AUDIO_REASON = process.env.CAPTURE_AUDIO_REASON ?? '';
 
 // シーン定義。固定セット。差し替えは PR で。
 // query: BASE_URL に追記するクエリ ('?' は付けない)
@@ -105,13 +109,20 @@ async function main() {
       console.log(`  saved ${OUT_DIR}/${s.name}.png`);
     }
 
-    // 音声テスト: ?audioTest=1 で 3 秒の WAV を合成、page.evaluate で取り出して保存
-    await captureAudioSample(browser);
+    // 音声 (WAV) は CAPTURE_AUDIO=1 のときだけ実行 (audio 関連の変更時 or 手動)
+    if (CAPTURE_AUDIO) {
+      console.log(`\n[audio capture triggered: ${CAPTURE_AUDIO_REASON}]`);
+      await captureAudioSample(browser);
+    } else {
+      console.log('\n[audio capture skipped] (CAPTURE_AUDIO=0)');
+    }
   } finally {
     await browser.close();
   }
 
-  console.log(`\nDone. ${SCENARIOS.length} screenshots + 1 audio sample saved to ${OUT_DIR}`);
+  const sceneCount = SCENARIOS.length;
+  const audioMsg = CAPTURE_AUDIO ? ' + 1 audio sample' : '';
+  console.log(`\nDone. ${sceneCount} screenshots${audioMsg} saved to ${OUT_DIR}`);
 }
 
 async function captureAudioSample(browser) {

@@ -75,11 +75,35 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Capture screenshots
+      # 音声 (WAV) キャプチャを走らせるか判定:
+      #   - workflow_dispatch (手動実行) は常に走らせる
+      #   - コミットメッセージに [audio] タグがあれば走らせる
+      #   - 直前 commit で src/audio.ts が変更されていれば走らせる
+      #   - それ以外は skip (WAV 録音は重いので毎回回さない)
+      - name: Detect audio capture trigger
+        id: audio_trigger
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "capture=1" >> $GITHUB_OUTPUT
+            echo "reason=manual" >> $GITHUB_OUTPUT
+          elif git log -1 --format=%B HEAD | grep -qE '\[audio\]'; then
+            echo "capture=1" >> $GITHUB_OUTPUT
+            echo "reason=tag" >> $GITHUB_OUTPUT
+          elif git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -qE '^src/audio\.ts$'; then
+            echo "capture=1" >> $GITHUB_OUTPUT
+            echo "reason=audio_changed" >> $GITHUB_OUTPUT
+          else
+            echo "capture=0" >> $GITHUB_OUTPUT
+            echo "reason=skip" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Capture screenshots (and audio if triggered)
         env:
           BASE_URL: ${{ needs.deploy.outputs.page_url }}
           EXPECTED_SHA: ${{ github.sha }}
           OUT_DIR: ./capture-out
+          CAPTURE_AUDIO: ${{ steps.audio_trigger.outputs.capture }}
+          CAPTURE_AUDIO_REASON: ${{ steps.audio_trigger.outputs.reason }}
         run: node scripts/capture.mjs
 
       - name: Force push screenshots to orphan branch (always 1 commit)
