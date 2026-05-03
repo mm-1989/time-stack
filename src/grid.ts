@@ -37,6 +37,12 @@ export class TimeGrid {
   private prevIntFilled = -1;
   private static readonly FLASH_MS = 700;
 
+  // 時刻境界エフェクト
+  private hourFlashStart = -Infinity;
+  private dayWaveStart = -Infinity;
+  private static readonly HOUR_FLASH_MS = 700;
+  private static readonly DAY_WAVE_MS = 1800;
+
   constructor(canvas: HTMLCanvasElement, opts: GridOptions) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
@@ -71,6 +77,14 @@ export class TimeGrid {
     this.prevOpts = null;
     this.completedFlashes.clear();
     this.prevIntFilled = -1;
+  }
+
+  triggerHourBoundary(now: number): void {
+    this.hourFlashStart = now;
+  }
+
+  triggerDayBoundary(now: number): void {
+    this.dayWaveStart = now;
   }
 
   /** スケール切替: OUT(旧グリッド) → IN(新グリッド) のアニメに入る */
@@ -152,6 +166,50 @@ export class TimeGrid {
     // 下部進捗バーは idle 時のみ
     if (this.mode === 'idle') {
       this.drawProgress(W, areaX, areaW, padBot, this.filled, this.opts.count, this.opts.fillColor);
+    }
+
+    // 時刻境界エフェクト (一番前面に重ねる)
+    this.drawBoundaryEffects(W, H, now);
+  }
+
+  private drawBoundaryEffects(W: number, H: number, now: number): void {
+    const { ctx } = this;
+    // 1 時間境界: 全画面の薄いフラッシュ
+    const ht = (now - this.hourFlashStart) / TimeGrid.HOUR_FLASH_MS;
+    if (ht < 1) {
+      const alpha = (1 - ht) * 0.16;
+      ctx.fillStyle = `rgba(255, 245, 208, ${alpha})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    // 1 日境界: 中央から外へ広がるリセット波
+    const dt = (now - this.dayWaveStart) / TimeGrid.DAY_WAVE_MS;
+    if (dt < 1) {
+      const cx = W / 2;
+      const cy = H / 2;
+      const maxR = Math.sqrt(W * W + H * H) / 2;
+      const eased = 1 - Math.pow(1 - dt, 3);
+      const ringR = eased * maxR;
+      // 二重リング (内側細い + 外側広い)
+      ctx.save();
+      ctx.strokeStyle = `rgba(255, 245, 208, ${(1 - dt) * 0.65})`;
+      ctx.lineWidth = (3 + (1 - dt) * 4) * this.dpr;
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+      // ぼやけた外側ハロー (lighter)
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = `rgba(242, 200, 121, ${(1 - dt) * 0.25})`;
+      ctx.lineWidth = 40 * this.dpr;
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      // 全画面の地のフラッシュ (前半だけ)
+      if (dt < 0.5) {
+        const a = (1 - dt * 2) * 0.22;
+        ctx.fillStyle = `rgba(255, 245, 208, ${a})`;
+        ctx.fillRect(0, 0, W, H);
+      }
     }
   }
 

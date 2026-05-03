@@ -69,10 +69,27 @@ function maybeUpdateTitle(): void {
   document.title = `${formatJstClock(Date.now())} · time-stack`;
 }
 
+// 時刻境界 (1 時間 / 1 日) を virtualMs ベースで検出して grid に通知
+let prevHourBucket = -1;
+let prevDayBucket = -1;
+function checkBoundaries(virtualMs: number, now: number): void {
+  const hourBucket = Math.floor(virtualMs / 3_600_000);
+  const dayBucket = Math.floor(virtualMs / 86_400_000);
+  if (prevHourBucket >= 0 && hourBucket > prevHourBucket) {
+    grid.triggerHourBoundary(now);
+  }
+  if (prevDayBucket >= 0 && dayBucket > prevDayBucket) {
+    grid.triggerDayBoundary(now);
+  }
+  prevHourBucket = hourBucket;
+  prevDayBucket = dayBucket;
+}
+
 function tick(now: number): void {
   const virtualMs = clock.tick(now);
   const filled = filledFor(SCALES[currentScaleId], virtualMs);
   grid.setFilled(filled, now);
+  checkBoundaries(virtualMs, now);
   grid.render(now);
   hud.update(virtualMs, speed, clock.frozen);
   maybeUpdateTitle();
