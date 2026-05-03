@@ -295,17 +295,16 @@ canvas.addEventListener('pointerleave', () => {
   tooltipEl.classList.remove('show');
 });
 
-// マスクリックで時刻スキップ: クリックされたマスの「開始時刻」へ virtualMs をジャンプ
+// デバッグ: Shift + マスクリックで時刻スキップ。通常クリックは無効。
 canvas.addEventListener('click', (e) => {
+  if (!e.shiftKey) return; // 通常クリックは何もしない
   const idx = grid.hitTest(e.clientX, e.clientY);
   if (idx < 0) return;
   const period = SCALES[currentScaleId].periodMs;
   const cellMs = SCALES[currentScaleId].msPerCell;
-  // 現周期内の「idx 番目マスの開始時刻」へ
   const cyclesSoFar = Math.floor(lastVirtualMs / period);
   const newVirtualMs = cyclesSoFar * period + idx * cellMs;
   clock.setVirtualMs(newVirtualMs);
-  // entry/flash の擬発火を抑制
   prevFilledFloor = idx - 1;
   prevCycleBucket = Math.floor(newVirtualMs / period);
 });

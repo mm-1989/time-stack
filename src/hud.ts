@@ -40,7 +40,7 @@ export class Hud {
     this.hintEl.innerHTML = isCoarse
       ? '<kbd>Space</kbd> 一時停止 ・ <kbd>?speed=N</kbd> で時間倍率'
       : '<kbd>M</kbd> / <kbd>H</kbd> / <kbd>D</kbd> スケール切替 ・ ' +
-        '<kbd>Space</kbd> 一時停止 ・ <kbd>?speed=N</kbd> で時間倍率';
+        '<kbd>Space</kbd> 一時停止 ・ <kbd>Shift+Click</kbd> でジャンプ ・ <kbd>?speed=N</kbd> で時間倍率';
     parent.appendChild(this.hintEl);
 
     requestAnimationFrame(() => {
