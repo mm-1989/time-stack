@@ -12,7 +12,7 @@
 //   ローカル: BASE_URL=http://localhost:5173/time-stack/ node scripts/capture.mjs
 
 import { chromium } from 'playwright';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 
 const BASE_URL = (process.env.BASE_URL ?? 'http://localhost:5173/time-stack/').replace(/\/?$/, '/');
 const OUT_DIR = process.env.OUT_DIR ?? './screenshots';
@@ -104,11 +104,37 @@ async function main() {
       await ctx.close();
       console.log(`  saved ${OUT_DIR}/${s.name}.png`);
     }
+
+    // 音声テスト: ?audioTest=1 で 3 秒の WAV を合成、page.evaluate で取り出して保存
+    await captureAudioSample(browser);
   } finally {
     await browser.close();
   }
 
-  console.log(`\nDone. ${SCENARIOS.length} screenshots saved to ${OUT_DIR}`);
+  console.log(`\nDone. ${SCENARIOS.length} screenshots + 1 audio sample saved to ${OUT_DIR}`);
+}
+
+async function captureAudioSample(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 800, height: 600 } });
+  const page = await ctx.newPage();
+  const url = buildUrl('audioTest=1');
+  console.log(`→ audio-sample.wav  ${url}`);
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  // recordAudioSample(3) → blob を window.__audioBlob にセットされる迄待つ
+  await page.waitForFunction(
+    () => Boolean(window.__audioBlob),
+    { timeout: 15_000 },
+  );
+  // Blob を ArrayBuffer 経由で Node 側へ
+  const data = await page.evaluate(async () => {
+    const blob = window.__audioBlob;
+    const buf = await blob.arrayBuffer();
+    return Array.from(new Uint8Array(buf));
+  });
+  const buffer = Buffer.from(data);
+  await writeFile(`${OUT_DIR}/audio-sample.wav`, buffer);
+  console.log(`  saved ${OUT_DIR}/audio-sample.wav (${buffer.length} bytes)`);
+  await ctx.close();
 }
 
 main().catch((e) => {

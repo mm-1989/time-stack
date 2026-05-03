@@ -6,7 +6,7 @@ import { SCALES, filledFor, type ScaleId } from './scales';
 import { ScaleSwitch } from './scaleSwitch';
 import { MiniGrid } from './miniGrid';
 import { makePromotion } from './promotion';
-import { playTick, playChime, playPromote, setMuted, isMuted } from './audio';
+import { playTick, playChime, playPromote, setMuted, isMuted, recordAudioSample } from './audio';
 import { InitScreen } from './initScreen';
 import { parseOriginFromUrl, initialMsForOrigin, formatDateForUrl, type Origin } from './origin';
 
@@ -23,6 +23,17 @@ const speed = Math.max(0.1, parseFloat(params.get('speed') ?? '1'));
 const animSlow = Math.max(0.1, parseFloat(params.get('animSlow') ?? '1'));
 // 起点モード: ?since=YYYY-MM-DD があればそれを採用。?reset=now-only-bypass 用。
 const resetStart = params.has('reset');
+
+// テスト用: ?audioTest=1 で 3 秒の WAV を合成して window.__audioBlob にセット。
+// Playwright が page.evaluate で取り出して保存できる。通常 UI は起動しない。
+const audioTestMode = params.has('audioTest');
+if (audioTestMode) {
+  recordAudioSample(3).then((blob) => {
+    (window as unknown as { __audioBlob: Blob }).__audioBlob = blob;
+    document.body.innerHTML =
+      '<div style="color:#0ff;font:14px monospace;padding:40px">audio sample ready (3s WAV in window.__audioBlob)</div>';
+  });
+}
 
 // 起動: URL に ?since があれば直接、なければ InitScreen で起点を選ばせる。
 async function bootstrap(): Promise<void> {
@@ -424,4 +435,4 @@ function tick(now: number): void {
   requestAnimationFrame(tick);
 }
 
-bootstrap(); // ← 起動: init 画面 (or URL ?since 直接) → start() → tick
+if (!audioTestMode) bootstrap(); // ← 起動: init 画面 (or URL ?since 直接) → start() → tick

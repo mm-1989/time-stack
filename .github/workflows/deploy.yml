@@ -93,12 +93,13 @@ jobs:
           WORK=/tmp/sshot-out
           mkdir -p "$WORK"
           cp ./capture-out/*.png "$WORK/"
+          cp ./capture-out/*.wav "$WORK/" 2>/dev/null || true
 
           cd "$WORK"
           git init -q
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add *.png
+          git add -A
           git commit -q -m "screenshots @ ${{ github.sha }}"
           git branch -M screenshots
           git push --force \
