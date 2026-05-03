@@ -381,10 +381,10 @@ export class TimeGrid {
           roundRect(ctx, x, y, w, h, r);
           ctx.fill();
           ctx.restore();
-          // 2) 外側に広がる波紋リング
+          // 2) 外側に広がる波紋リング (半径は控えめにして隣接マスを侵さない範囲で)
           const eased = 1 - Math.pow(1 - t, 3);
           const baseR = Math.min(w, h) * 0.5;
-          const ringR = baseR + Math.max(w, h) * 0.9 * eased;
+          const ringR = baseR + Math.max(w, h) * 0.45 * eased;
           ctx.save();
           ctx.strokeStyle = alphaCol(fillColor, (1 - t) * 0.55);
           ctx.lineWidth = (1.2 + (1 - t) * 1.8) * this.dpr;

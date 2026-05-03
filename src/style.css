@@ -261,6 +261,22 @@ canvas {
     padding: 1px 5px;
     font-size: 9px;
   }
+  /* スケール切替を HUD の下に移動して干渉を解消 */
+  .scale-switch {
+    top: auto;
+    bottom: 60px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .scale-btn {
+    padding: 6px 12px;
+    font-size: 10px;
+    gap: 6px;
+  }
+  .scale-dot {
+    width: 6px;
+    height: 6px;
+  }
 }
 
 /* 縦長 (portrait) で極端に細い場合: ヒントを 2 行に折り返し許可 */
