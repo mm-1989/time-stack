@@ -94,6 +94,9 @@ function start(origin: Origin): void {
 
   const initEl = document.getElementById('init-overlay');
   if (initEl) setTimeout(() => initEl.classList.add('gone'), 1500);
+  // ?since= 直接起動 (init 画面 skip) でも AudioContext を起こす試み。
+  // 初回ロード直後はブラウザによっては gesture 扱いされて即 running になる。
+  warmupAudio();
   requestAnimationFrame(tick);
 }
 

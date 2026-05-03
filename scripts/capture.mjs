@@ -37,8 +37,9 @@ const SCENARIOS = [
   { name: '06-mobile-day', query: 'scale=day&since=now&unlock=all', wait: 1500, viewport: { width: 375, height: 812 } },
   { name: '07-promotion', query: 'scale=minute&debug=promotion&animSlow=4&since=now&unlock=all', wait: 1300, waitUntil: 'domcontentloaded' },
   // 音声デバッグ: AudioContext.state + play 回数の HUD 表示と console log を捉える。
-  // speed=900 で 1.5 秒に 1 マス完了 = tick が確実に走る。
-  { name: '08-audio-state', query: 'scale=minute&debug=audio&since=now&speed=900&unlock=all', wait: 4000, captureConsole: true },
+  // speed=900 で 1.5 秒に 1 マス完了 = tick が確実に走る。triggerGesture で user
+  // gesture (page.mouse.click) を発火して AudioContext を resume させる。
+  { name: '08-audio-state', query: 'scale=minute&debug=audio&since=now&speed=900&unlock=all', wait: 4000, captureConsole: true, triggerGesture: true },
 ];
 
 function buildUrl(query) {
@@ -115,6 +116,12 @@ async function main() {
       const url = buildUrl(s.query);
       console.log(`→ ${s.name} (${viewport.width}×${viewport.height}) ${url}`);
       await page.goto(url, { waitUntil: s.waitUntil ?? 'networkidle' });
+      // triggerGesture: 起動直後に画面中央クリックで user gesture を作り、
+      // AudioContext.resume() を許容させる (audio debug シーンで使用)
+      if (s.triggerGesture) {
+        await page.waitForTimeout(200);
+        await page.mouse.click(viewport.width / 2, viewport.height / 2);
+      }
       if (s.wait > 0) await page.waitForTimeout(s.wait);
       await page.screenshot({ path: `${OUT_DIR}/${s.name}.png`, fullPage: false });
       if (s.captureConsole && consoleLines.length > 0) {
