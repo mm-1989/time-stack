@@ -32,8 +32,8 @@ const SCENARIOS = [
   // +20ms で集約の極初期 (マスが画面端に残りつつ中央へ動き出した瞬間)
   { name: '05-collapse', query: 'scale=hour&speed=86400&reset', wait: 60_020 },
   { name: '06-mobile-day', query: 'scale=day', wait: 1500, viewport: { width: 375, height: 812 } },
-  // promotion フライト中盤を狙う: 1500ms 後に発射 + 800ms duration → 1500+400 = 1900ms 経過時に飛行 50% 地点
-  { name: '07-promotion', query: 'scale=minute&debug=promotion', wait: 1900 },
+  // promotion フライト中盤を狙う: 起動 200ms 後に発射 + 800ms duration、wait 600ms = 飛行 50% 地点
+  { name: '07-promotion', query: 'scale=minute&debug=promotion', wait: 600 },
 ];
 
 function buildUrl(query) {

@@ -122,12 +122,13 @@ function checkBoundaries(virtualMs: number, now: number): void {
   prevDayBucket = dayBucket;
 }
 
-// デバッグ: ?debug=promotion で起動 1.5 秒後に promotion を強制発火 (キャプチャ用)
+// デバッグ: ?debug=promotion で起動 200ms 後に promotion を強制発火 (キャプチャ用)
+// Playwright の wait と組み合わせて飛行中盤を撮影できる。
 const debug = params.get('debug');
 if (debug === 'promotion') {
   const targetId = PROMOTE_TARGET[currentScaleId];
   if (targetId) {
-    setTimeout(() => startPromotion(targetId, performance.now()), 1500);
+    setTimeout(() => startPromotion(targetId, performance.now()), 200);
   }
 }
 
