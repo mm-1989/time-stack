@@ -175,8 +175,29 @@ canvas {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  position: relative;
+  overflow: hidden;
   transition: color 0.2s ease, background 0.2s ease;
 }
+/* 自スケール内の進捗バー (--p: 0..1)。下位完了で動くと「上位の何割が埋まったか」が見える */
+.scale-btn::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 4px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--btn-color, #fff5d0);
+  opacity: 0.6;
+  transform: scaleX(var(--p, 0));
+  transform-origin: left center;
+  transition: transform 280ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  pointer-events: none;
+}
+.scale-btn[data-scale="minute"] { --btn-color: #fff5d0; }
+.scale-btn[data-scale="hour"] { --btn-color: #f2c879; }
+.scale-btn[data-scale="day"] { --btn-color: #b48b5a; }
 .scale-btn:hover {
   color: #c0c8d8;
   background: rgba(255, 255, 255, 0.04);
@@ -203,6 +224,16 @@ canvas {
 }
 .scale-btn.pulse {
   animation: scale-btn-pulse 520ms ease-out;
+}
+
+/* 下位スケールの 1 マス完了で micropulse を発火 (連鎖の弱い表現) */
+@keyframes scale-btn-micropulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 245, 208, 0); }
+  50% { box-shadow: 0 0 8px 2px rgba(255, 245, 208, 0.3); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 245, 208, 0); }
+}
+.scale-btn.micropulse {
+  animation: scale-btn-micropulse 280ms ease-out;
 }
 .scale-dot {
   display: inline-block;

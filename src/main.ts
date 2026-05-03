@@ -126,6 +126,18 @@ function checkBoundaries(virtualMs: number, now: number): void {
   prevDayBucket = dayBucket;
 }
 
+// 自スケール内の「マス完了」 = 上位スケールの「マス 1 個分前進」。
+// 上位バッジを微かに脈動させて連鎖感を出す。
+let prevFilledFloor = -1;
+function checkCellComplete(filled: number): void {
+  const intFilled = Math.floor(filled);
+  if (prevFilledFloor >= 0 && intFilled > prevFilledFloor) {
+    const targetId = PROMOTE_TARGET[currentScaleId];
+    if (targetId) scaleSwitch.microPulse(targetId);
+  }
+  prevFilledFloor = intFilled;
+}
+
 // デバッグ: ?debug=promotion で起動 200ms 後に promotion を強制発火 (キャプチャ用)
 // 発射タイミングは固定。飛行 duration のみ animSlow を反映するので、wait を長めに取れば
 // 確実に飛行中盤を撮影できる。
@@ -158,6 +170,13 @@ function tick(now: number): void {
   const filled = filledFor(SCALES[currentScaleId], virtualMs);
   grid.setFilled(filled, now);
   checkBoundaries(virtualMs, now);
+  checkCellComplete(filled);
+  // 各バッジ進捗バーを更新 (B 案)。3 スケール独立に「自スケール内の進捗」を出す。
+  scaleSwitch.updateProgress({
+    minute: filledFor(SCALES.minute, virtualMs) / SCALES.minute.count,
+    hour: filledFor(SCALES.hour, virtualMs) / SCALES.hour.count,
+    day: filledFor(SCALES.day, virtualMs) / SCALES.day.count,
+  });
   grid.render(now);
   hud.update(virtualMs, speed, clock.frozen);
   maybeUpdateTitle();

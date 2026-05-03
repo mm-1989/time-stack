@@ -68,6 +68,25 @@ export class ScaleSwitch {
     btn.classList.add('pulse');
   }
 
+  /** 下位スケールの 1 マス完了時に上位バッジを微かに脈動 (連鎖感) */
+  microPulse(id: ScaleId): void {
+    const btn = this.buttons.get(id);
+    if (!btn) return;
+    btn.classList.remove('micropulse');
+    void btn.offsetWidth;
+    btn.classList.add('micropulse');
+  }
+
+  /** 各バッジに「自スケール内の進捗」(0..1) を CSS 変数で渡す。バッジ下端の細いバーが伸びる */
+  updateProgress(progress: Partial<Record<ScaleId, number>>): void {
+    for (const [id, p] of Object.entries(progress)) {
+      const btn = this.buttons.get(id as ScaleId);
+      if (btn && p !== undefined) {
+        btn.style.setProperty('--p', String(Math.max(0, Math.min(1, p))));
+      }
+    }
+  }
+
   private refresh(): void {
     for (const [id, btn] of this.buttons) {
       btn.classList.toggle('active', id === this.current);
