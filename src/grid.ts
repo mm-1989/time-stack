@@ -11,6 +11,8 @@ export interface GridOptions {
   count: number;
   scaleLabel: string;
   fillColor: string;
+  /** 1 マス内に描く下位粒子の数 (0 で粒子なし、進行中マスのみ可視化) */
+  subdivisions?: number;
 }
 
 type Mode = 'idle' | 'out' | 'in';
@@ -252,20 +254,28 @@ export class TimeGrid {
       roundRect(ctx, x, y, w, h, r);
       ctx.fill();
     } else if (isCurrent) {
-      const fillH = h * fracFilled;
-      const fillY = y + h - fillH;
-      ctx.save();
-      roundRect(ctx, x, y, w, h, r);
-      ctx.clip();
-      const g = ctx.createLinearGradient(x, fillY, x, y + h);
-      g.addColorStop(0, alphaCol(fillColor, 0.95));
-      g.addColorStop(1, alphaCol(shade(fillColor, -0.4), 0.85));
-      ctx.fillStyle = g;
-      ctx.fillRect(x, fillY, w, fillH);
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      ctx.fillRect(x, fillY - 0.5 * this.dpr, w, 1 * this.dpr);
-      ctx.restore();
+      const subs = opts.subdivisions ?? 0;
+      if (subs > 0) {
+        // 下位粒度を粒子で可視化 (進捗ゲージ塗りは省略、粒子の点灯数で進捗を表現)
+        this.drawSubParticles(x, y, w, h, fracFilled, subs, fillColor, now);
+      } else {
+        // 下位粒度なし: 下→上の進捗ゲージで進行を表す (1 分モードなど)
+        const fillH = h * fracFilled;
+        const fillY = y + h - fillH;
+        ctx.save();
+        roundRect(ctx, x, y, w, h, r);
+        ctx.clip();
+        const g = ctx.createLinearGradient(x, fillY, x, y + h);
+        g.addColorStop(0, alphaCol(fillColor, 0.95));
+        g.addColorStop(1, alphaCol(shade(fillColor, -0.4), 0.85));
+        ctx.fillStyle = g;
+        ctx.fillRect(x, fillY, w, fillH);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillRect(x, fillY - 0.5 * this.dpr, w, 1 * this.dpr);
+        ctx.restore();
+      }
 
+      // 進行中マス共通: 脈動 + glow の輪郭
       const pulse = 0.5 + 0.5 * Math.sin(now * 0.004);
       ctx.save();
       ctx.shadowColor = fillColor;
@@ -275,6 +285,75 @@ export class TimeGrid {
       roundRect(ctx, x, y, w, h, r);
       ctx.stroke();
       ctx.restore();
+    }
+  }
+
+  private drawSubParticles(
+    x: number, y: number, w: number, h: number,
+    fracFilled: number, subs: number, color: string, now: number,
+  ): void {
+    const { ctx } = this;
+    // 粒子の格子レイアウト: マスのアスペクト比に合わせて cols/rows を選ぶ
+    const subAspect = w / h;
+    let subCols = Math.max(1, Math.round(Math.sqrt(subs * subAspect)));
+    while (subCols > 1 && Math.ceil(subs / subCols) > subs) subCols--;
+    // 整列性のため、subs を割り切れる cols を優先
+    const candidates = [subCols, subCols - 1, subCols + 1, subCols - 2, subCols + 2].filter(
+      (c) => c > 0 && c <= subs,
+    );
+    for (const c of candidates) {
+      if (subs % c === 0) { subCols = c; break; }
+    }
+    const subRows = Math.ceil(subs / subCols);
+
+    const padIn = Math.min(w, h) * 0.14;
+    const innerX = x + padIn;
+    const innerY = y + padIn;
+    const innerW = w - padIn * 2;
+    const innerH = h - padIn * 2;
+    const cellGap = Math.max(1 * this.dpr, Math.min(innerW / subCols, innerH / subRows) * 0.18);
+    const cellW = (innerW - cellGap * (subCols - 1)) / subCols;
+    const cellH = (innerH - cellGap * (subRows - 1)) / subRows;
+    const dotR = Math.min(cellW, cellH) * 0.36;
+
+    if (dotR < 0.5 * this.dpr) return; // 粒子が小さすぎたら描画スキップ
+
+    const subFilled = fracFilled * subs;
+    const subInt = Math.floor(subFilled);
+    const subFrac = subFilled - subInt;
+
+    for (let i = 0; i < subs; i++) {
+      const r = Math.floor(i / subCols);
+      const c = i % subCols;
+      const cx = innerX + c * (cellW + cellGap) + cellW / 2;
+      const cy = innerY + r * (cellH + cellGap) + cellH / 2;
+
+      if (i < subInt) {
+        // 点灯済み
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(cx, cy, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (i === subInt) {
+        // 進行中サブ粒子: フェードイン中 + 脈動
+        const pulse = 0.5 + 0.5 * Math.sin(now * 0.012);
+        const fadeAlpha = subFrac * (0.55 + pulse * 0.45);
+        ctx.save();
+        ctx.shadowColor = color;
+        ctx.shadowBlur = (3 + pulse * 5) * this.dpr;
+        ctx.fillStyle = alphaCol(color, fadeAlpha);
+        ctx.beginPath();
+        ctx.arc(cx, cy, dotR * (0.7 + subFrac * 0.5), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else {
+        // 未点灯
+        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+        ctx.lineWidth = 0.8 * this.dpr;
+        ctx.beginPath();
+        ctx.arc(cx, cy, dotR * 0.85, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
   }
 

@@ -29,9 +29,15 @@ function scaleToGridOpts(id: ScaleId): {
   count: number;
   scaleLabel: string;
   fillColor: string;
+  subdivisions: number;
 } {
   const s = SCALES[id];
-  return { count: s.count, scaleLabel: s.label, fillColor: s.fillColor };
+  return {
+    count: s.count,
+    scaleLabel: s.label,
+    fillColor: s.fillColor,
+    subdivisions: s.subdivisions,
+  };
 }
 
 function fitCanvas(): void {
