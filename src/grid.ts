@@ -7,6 +7,8 @@
 //     OUT = 旧スケールの進行中マスが画面中央へズームイン、他はフェードアウト
 //     IN  = 新スケールのマスが中央から外側へ stagger で展開
 
+import { drawPromotion, type PromotionFlight } from './promotion';
+
 export interface GridOptions {
   count: number;
   scaleLabel: string;
@@ -48,6 +50,9 @@ export class TimeGrid {
   // collapse 完了後の余韻 (中央に小さい光点が残ってフェード) — 「1 周期 = 1 つに畳まれた」読み解きの完成
   private afterglowStart = -Infinity;
   private static readonly AFTERGLOW_MS = 700;
+
+  // 階層昇格フライト (promotion): 集約された 1 単位が上位スケールバッジへ飛んでいく
+  private promotions: PromotionFlight[] = [];
 
   constructor(canvas: HTMLCanvasElement, opts: GridOptions) {
     this.canvas = canvas;
@@ -96,6 +101,11 @@ export class TimeGrid {
 
   triggerDayBoundary(now: number): void {
     this.dayWaveStart = now;
+  }
+
+  /** 階層昇格フライトを 1 件追加 (promotion.ts の makePromotion で生成) */
+  triggerPromotion(flight: PromotionFlight): void {
+    this.promotions.push(flight);
   }
 
   /** スケール切替: OUT(旧グリッド) → IN(新グリッド) のアニメに入る */
@@ -220,6 +230,9 @@ export class TimeGrid {
       ctx.fill();
       ctx.restore();
     }
+
+    // 階層昇格フライト (collapse 完了後に発火されたもの)
+    this.promotions = this.promotions.filter((f) => drawPromotion(ctx, f, now, this.dpr));
 
     // 1 時間境界 (= 1 周期完了) は collapse mode が担当 (全マス中央集約)
     // 1 日境界: 中央から外へ広がるリセット波

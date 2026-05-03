@@ -51,6 +51,23 @@ export class ScaleSwitch {
     this.onChange(id);
   }
 
+  /** バッジ中心の画面座標 (CSS px)。promotion 飛行のターゲットに使う */
+  getButtonCenter(id: ScaleId): { x: number; y: number } | null {
+    const btn = this.buttons.get(id);
+    if (!btn) return null;
+    const rect = btn.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  }
+
+  /** バッジを「受け取った」表現で短く脈動させる (CSS keyframe) */
+  pulse(id: ScaleId): void {
+    const btn = this.buttons.get(id);
+    if (!btn) return;
+    btn.classList.remove('pulse');
+    void btn.offsetWidth; // reflow を強制してアニメをリスタート
+    btn.classList.add('pulse');
+  }
+
   private refresh(): void {
     for (const [id, btn] of this.buttons) {
       btn.classList.toggle('active', id === this.current);
