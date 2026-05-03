@@ -1,8 +1,6 @@
 // 起点 (origin) の定義: NOW (JST 本日 0:00:00) or 任意日時 (custom)。
 // URL ?since=YYYY-MM-DD[THH:MM] でパース可能。
 
-import { elapsedSinceJstMidnight } from './time';
-
 export type Origin = { mode: 'now' } | { mode: 'custom'; date: Date };
 
 /** URL の ?since= をパースして Origin を返す。無効/無し なら null。
