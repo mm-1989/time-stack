@@ -227,6 +227,9 @@ export class TimeGrid {
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
+    // TRON 地面グリッド (薄い cyan 線、32 css px 間隔の格子)。マシン世界の床感を出す。
+    this.drawAmbientGrid(W, H);
+
     // モード遷移チェック (animSlow を掛けた duration で判定)
     if (this.mode === 'out' && now - this.tStart >= this.ms(OUT_MS)) {
       this.mode = 'in';
@@ -673,6 +676,43 @@ export class TimeGrid {
         ctx.stroke();
       }
     }
+  }
+
+  /**
+   * 背景に薄い TRON 風グリッド (細い cyan 線の格子)。中央がやや明るく、端は暗くなる
+   * radial gradient で消失点感を出す。
+   */
+  private drawAmbientGrid(W: number, H: number): void {
+    const { ctx } = this;
+    const step = 32 * this.dpr;
+    const cx = W / 2;
+    const cy = H / 2;
+    const maxDist = Math.hypot(W, H) / 2;
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0, 245, 255, 1)';
+    ctx.lineWidth = 0.5 * this.dpr;
+    // 縦線
+    for (let x = cx % step; x < W; x += step) {
+      const dist = Math.abs(x - cx);
+      const a = 0.06 * (1 - Math.min(1, dist / maxDist));
+      ctx.globalAlpha = Math.max(0.012, a);
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    // 横線
+    for (let y = cy % step; y < H; y += step) {
+      const dist = Math.abs(y - cy);
+      const a = 0.06 * (1 - Math.min(1, dist / maxDist));
+      ctx.globalAlpha = Math.max(0.012, a);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   private drawHeaderLabel(W: number, _H: number, opts: GridOptions): void {
