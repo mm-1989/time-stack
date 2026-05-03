@@ -2,7 +2,10 @@
 // AudioContext は遅延生成。デフォルトはミュート (UX を邪魔しない)。
 
 let ctx: AudioContext | null = null;
-let muted = true;
+// デフォルトはサウンド ON。WebAudio の autoplay policy により、初回ユーザ
+// インタラクション (キー押下/クリック) までは AudioContext が suspended で
+// 実質的に音が出ないが、それ以降は ON の挙動になる。
+let muted = false;
 
 export function setMuted(m: boolean): void {
   muted = m;
