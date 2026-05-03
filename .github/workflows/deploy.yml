@@ -118,6 +118,7 @@ jobs:
           mkdir -p "$WORK"
           cp ./capture-out/*.png "$WORK/"
           cp ./capture-out/*.wav "$WORK/" 2>/dev/null || true
+          cp ./capture-out/*.log "$WORK/" 2>/dev/null || true
 
           cd "$WORK"
           git init -q

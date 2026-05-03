@@ -92,13 +92,16 @@ function schedulePromote(c: BaseAudioContext, when: number): void {
   osc.stop(when + 0.4);
 }
 
-// === Live 再生 API ===
+// === Live 再生 API + デバッグカウンタ ===
+
+const counts = { tick: 0, chime: 0, promote: 0 };
 
 export function playTick(): void {
   if (muted) return;
   const c = ensureCtx();
   if (!c) return;
   scheduleTick(c, c.currentTime);
+  counts.tick++;
 }
 
 export function playChime(): void {
@@ -106,6 +109,7 @@ export function playChime(): void {
   const c = ensureCtx();
   if (!c) return;
   scheduleChime(c, c.currentTime);
+  counts.chime++;
 }
 
 export function playPromote(): void {
@@ -113,6 +117,18 @@ export function playPromote(): void {
   const c = ensureCtx();
   if (!c) return;
   schedulePromote(c, c.currentTime);
+  counts.promote++;
+}
+
+/** 現在の AudioContext.state ('uninit' = 未生成 / 'running' / 'suspended' / 'closed') */
+export function getAudioState(): string {
+  if (!ctx) return 'uninit';
+  return ctx.state;
+}
+
+/** 各 play 関数の呼出回数 (snapshot) */
+export function getCallCounts(): { tick: number; chime: number; promote: number } {
+  return { ...counts };
 }
 
 // === オフライン録音 (テスト用) ===

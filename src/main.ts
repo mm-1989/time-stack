@@ -6,7 +6,10 @@ import { SCALES, filledFor, type ScaleId } from './scales';
 import { ScaleSwitch } from './scaleSwitch';
 import { MiniGrid } from './miniGrid';
 import { makePromotion } from './promotion';
-import { playTick, playChime, playPromote, setMuted, isMuted, recordAudioSample, warmupAudio } from './audio';
+import {
+  playTick, playChime, playPromote, setMuted, isMuted,
+  recordAudioSample, warmupAudio, getAudioState, getCallCounts,
+} from './audio';
 import { InitScreen } from './initScreen';
 import { parseOriginFromUrl, initialMsForOrigin, formatDateForUrl, type Origin } from './origin';
 
@@ -330,6 +333,20 @@ if (debug === 'promotion') {
         (t ? ` target=(${Math.round(t.x)},${Math.round(t.y)})` : ' target=null'),
     );
   }, 100);
+}
+
+// デバッグ: ?debug=audio 時、AudioContext.state と play 回数を HUD + console に出力
+if (debug === 'audio') {
+  let lastLine = '';
+  setInterval(() => {
+    const c = getCallCounts();
+    const line = `AUDIO: ${getAudioState()} · tick=${c.tick} chime=${c.chime} promote=${c.promote} · muted=${isMuted()}`;
+    hud.setDebug(line);
+    if (line !== lastLine) {
+      console.log('[time-stack/audio]', line);
+      lastLine = line;
+    }
+  }, 200);
 }
 
 // R6 マウス追随視差: canvas が pointer 位置に応じて微小シフト (立体感)。

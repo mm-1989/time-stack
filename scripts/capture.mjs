@@ -36,6 +36,9 @@ const SCENARIOS = [
   { name: '05-collapse', query: 'scale=hour&speed=86400&reset&since=now&unlock=all', wait: 60_020 },
   { name: '06-mobile-day', query: 'scale=day&since=now&unlock=all', wait: 1500, viewport: { width: 375, height: 812 } },
   { name: '07-promotion', query: 'scale=minute&debug=promotion&animSlow=4&since=now&unlock=all', wait: 1300, waitUntil: 'domcontentloaded' },
+  // 音声デバッグ: AudioContext.state + play 回数の HUD 表示と console log を捉える。
+  // speed=900 で 1.5 秒に 1 マス完了 = tick が確実に走る。
+  { name: '08-audio-state', query: 'scale=minute&debug=audio&since=now&speed=900&unlock=all', wait: 4000, captureConsole: true },
 ];
 
 function buildUrl(query) {
@@ -100,13 +103,27 @@ async function main() {
         deviceScaleFactor: 2,
       });
       const page = await ctx.newPage();
+      // captureConsole が指定されていれば、console.log を集めて txt 保存
+      const consoleLines = [];
+      if (s.captureConsole) {
+        page.on('console', (msg) => {
+          if (msg.type() === 'log' || msg.type() === 'info') {
+            consoleLines.push(msg.text());
+          }
+        });
+      }
       const url = buildUrl(s.query);
       console.log(`→ ${s.name} (${viewport.width}×${viewport.height}) ${url}`);
       await page.goto(url, { waitUntil: s.waitUntil ?? 'networkidle' });
       if (s.wait > 0) await page.waitForTimeout(s.wait);
       await page.screenshot({ path: `${OUT_DIR}/${s.name}.png`, fullPage: false });
+      if (s.captureConsole && consoleLines.length > 0) {
+        await writeFile(`${OUT_DIR}/${s.name}.log`, consoleLines.join('\n') + '\n');
+        console.log(`  saved ${OUT_DIR}/${s.name}.png + ${s.name}.log (${consoleLines.length} lines)`);
+      } else {
+        console.log(`  saved ${OUT_DIR}/${s.name}.png`);
+      }
       await ctx.close();
-      console.log(`  saved ${OUT_DIR}/${s.name}.png`);
     }
 
     // 音声 (WAV) は CAPTURE_AUDIO=1 のときだけ実行 (audio 関連の変更時 or 手動)
