@@ -15,10 +15,11 @@ export interface GridOptions {
   subdivisions?: number;
 }
 
-type Mode = 'idle' | 'out' | 'in';
+type Mode = 'idle' | 'out' | 'in' | 'collapse';
 
 const OUT_MS = 380;
 const IN_MS = 520;
+const COLLAPSE_MS = 750;
 
 export class TimeGrid {
   private canvas: HTMLCanvasElement;
@@ -38,9 +39,7 @@ export class TimeGrid {
   private static readonly FLASH_MS = 700;
 
   // 時刻境界エフェクト
-  private hourFlashStart = -Infinity;
   private dayWaveStart = -Infinity;
-  private static readonly HOUR_FLASH_MS = 700;
   private static readonly DAY_WAVE_MS = 1800;
 
   constructor(canvas: HTMLCanvasElement, opts: GridOptions) {
@@ -79,8 +78,13 @@ export class TimeGrid {
     this.prevIntFilled = -1;
   }
 
+  /** 周期境界 (1 時間 = 1 周期完了): 60 マスを中央へ集約させて節目化 */
   triggerHourBoundary(now: number): void {
-    this.hourFlashStart = now;
+    // 既存の transition 中なら干渉を避けて何もしない
+    if (this.mode !== 'idle') return;
+    this.mode = 'collapse';
+    this.tStart = now;
+    this.completedFlashes.clear();
   }
 
   triggerDayBoundary(now: number): void {
@@ -141,6 +145,12 @@ export class TimeGrid {
       this.mode = 'idle';
       this.prevOpts = null;
     }
+    if (this.mode === 'collapse' && now - this.tStart >= COLLAPSE_MS) {
+      this.mode = 'idle';
+      // 集約完了後、新周期の最初のマスフラッシュは抑制 (即フラッシュは違和感)
+      this.prevIntFilled = Math.floor(this.filled);
+      this.completedFlashes.clear();
+    }
 
     // ラベル: idle/in は新スケール、out は旧スケール
     const labelOpts = this.mode === 'out' && this.prevOpts ? this.prevOpts : this.opts;
@@ -159,6 +169,9 @@ export class TimeGrid {
       this.renderGrid(this.prevOpts, this.prevFilled, areaX, areaY, areaW, areaH, now, 'out');
     } else if (this.mode === 'in') {
       this.renderGrid(this.opts, this.filled, areaX, areaY, areaW, areaH, now, 'in');
+    } else if (this.mode === 'collapse') {
+      // 集約: 旧周期の "60 マス満タン状態" を中央へ吸い込ませる
+      this.renderGrid(this.opts, this.opts.count, areaX, areaY, areaW, areaH, now, 'collapse');
     } else {
       this.renderGrid(this.opts, this.filled, areaX, areaY, areaW, areaH, now, 'idle');
     }
@@ -174,13 +187,7 @@ export class TimeGrid {
 
   private drawBoundaryEffects(W: number, H: number, now: number): void {
     const { ctx } = this;
-    // 1 時間境界: 全画面の薄いフラッシュ
-    const ht = (now - this.hourFlashStart) / TimeGrid.HOUR_FLASH_MS;
-    if (ht < 1) {
-      const alpha = (1 - ht) * 0.16;
-      ctx.fillStyle = `rgba(255, 245, 208, ${alpha})`;
-      ctx.fillRect(0, 0, W, H);
-    }
+    // 1 時間境界 (= 1 周期完了) は collapse mode が担当 (全マス中央集約)
     // 1 日境界: 中央から外へ広がるリセット波
     const dt = (now - this.dayWaveStart) / TimeGrid.DAY_WAVE_MS;
     if (dt < 1) {
@@ -280,6 +287,16 @@ export class TimeGrid {
         ty = screenCy + (cellCy - screenCy) * eased;
         scale = Math.max(0, eased);
         alpha = Math.min(1, t * 1.5);
+      } else if (phase === 'collapse') {
+        // 全マスが画面中央へ吸い込まれて scale 0 + alpha 0 へ
+        // stagger 無し: 全マスが「同じ運命」として一斉に集約 → 1 つに収束する読み解き
+        const t = Math.min(1, (now - this.tStart) / COLLAPSE_MS);
+        const easedPos = easeInQuad(t); // 中央への引き寄せは加速
+        const easedFade = easeOutCubic(t); // フェードは早めに減衰開始
+        tx = cellCx + (screenCx - cellCx) * easedPos;
+        ty = cellCy + (screenCy - cellCy) * easedPos;
+        scale = Math.max(0, 1 - easedFade);
+        alpha = 1 - easedFade;
       }
 
       if (scale <= 0.001 || alpha <= 0.001) continue;
