@@ -291,15 +291,18 @@ export class TimeGrid {
         scale = Math.max(0, eased);
         alpha = Math.min(1, t * 1.5);
       } else if (phase === 'collapse') {
-        // 全マスが画面中央へ吸い込まれて scale 0 + alpha 0 へ
-        // stagger 無し: 全マスが「同じ運命」として一斉に集約 → 1 つに収束する読み解き
+        // 全マスが画面中央へ吸い込まれて scale 0 + alpha 0 へ。
+        // 「動きが見える瞬間を残す」ため、移動・scale・alpha の進行関数を分ける:
+        //   移動: easeInQuad (前半はゆっくり始まり、後半に中央へ吸い込まれる)
+        //   scale: linear (中盤までマスが半分以上残る)
+        //   alpha: easeInQuad (前半は不透明を保ち、後半で一気に消える)
+        // → t≈0.4 で「マスが少し中央寄り、まだ大きく見えている」絵が成立
         const t = Math.min(1, (now - this.tStart) / COLLAPSE_MS);
-        const easedPos = easeInQuad(t); // 中央への引き寄せは加速
-        const easedFade = easeOutCubic(t); // フェードは早めに減衰開始
+        const easedPos = easeInQuad(t);
         tx = cellCx + (screenCx - cellCx) * easedPos;
         ty = cellCy + (screenCy - cellCy) * easedPos;
-        scale = Math.max(0, 1 - easedFade);
-        alpha = 1 - easedFade;
+        scale = Math.max(0, 1 - t);
+        alpha = 1 - easeInQuad(t);
       }
 
       if (scale <= 0.001 || alpha <= 0.001) continue;
