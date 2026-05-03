@@ -500,8 +500,8 @@ export class TimeGrid {
 
     // TRON: 全マス共通で「線」が主役。塗りは控えめ、線の輝度で状態を表す。
     if (!isFilled && !isCurrent && !isPreview) {
-      // 未塗マス: 細い淡い線のみ
-      ctx.strokeStyle = 'rgba(0, 245, 255, 0.10)';
+      // 未塗マス: 細い線のみ。TRON のグリッド感を保つため枠線は確実に見える濃さに。
+      ctx.strokeStyle = 'rgba(0, 245, 255, 0.20)';
       ctx.lineWidth = 1 * this.dpr;
       roundRect(ctx, x, y, w, h, r);
       ctx.stroke();
