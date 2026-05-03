@@ -2,6 +2,8 @@ import './style.css';
 import { VirtualClock } from './time';
 import { TimeGrid } from './grid';
 import { Hud } from './hud';
+import { SCALES, filledFor, type ScaleId } from './scales';
+import { ScaleSwitch } from './scaleSwitch';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
@@ -11,17 +13,26 @@ canvas.className = 'time-canvas';
 app.appendChild(canvas);
 
 const speed = Math.max(0.1, parseFloat(new URL(location.href).searchParams.get('speed') ?? '1'));
-const wallStart = performance.now();
-const clock = new VirtualClock(speed, wallStart);
+const clock = new VirtualClock(speed, performance.now());
 
-// Phase 4a: 1 日モードのみ (24 マス、1 時間で 1 マス)
-const grid = new TimeGrid(canvas, {
-  count: 24,
-  scaleLabel: '1 day · 24 hours',
-  fillColor: '#f2c879',
+let currentScaleId: ScaleId = (new URL(location.href).searchParams.get('scale') as ScaleId) ?? 'day';
+if (!(currentScaleId in SCALES)) currentScaleId = 'day';
+
+const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId));
+const hud = new Hud(document.body);
+new ScaleSwitch(document.body, currentScaleId, (id) => {
+  currentScaleId = id;
+  grid.setOptions(scaleToGridOpts(id));
 });
 
-const hud = new Hud(document.body);
+function scaleToGridOpts(id: ScaleId): {
+  count: number;
+  scaleLabel: string;
+  fillColor: string;
+} {
+  const s = SCALES[id];
+  return { count: s.count, scaleLabel: s.label, fillColor: s.fillColor };
+}
 
 function fitCanvas(): void {
   const dpr = Math.min(window.devicePixelRatio, 2);
@@ -41,8 +52,7 @@ window.addEventListener('keydown', (e) => {
 
 function tick(now: number): void {
   const virtualMs = clock.tick(now);
-  // 1 日 = 86_400_000 ms
-  const filled = (virtualMs / 86_400_000) * 24;
+  const filled = filledFor(SCALES[currentScaleId], virtualMs);
   grid.setFilled(filled);
   grid.render(now);
   hud.update(virtualMs, speed, clock.frozen);

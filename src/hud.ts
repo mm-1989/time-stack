@@ -23,7 +23,9 @@ export class Hud {
 
     this.hintEl = document.createElement('div');
     this.hintEl.className = 'hud-hint';
-    this.hintEl.innerHTML = '<kbd>Space</kbd> 一時停止 ・ <kbd>?speed=N</kbd> で時間倍率';
+    this.hintEl.innerHTML =
+      '<kbd>M</kbd> / <kbd>H</kbd> / <kbd>D</kbd> スケール切替 ・ ' +
+      '<kbd>Space</kbd> 一時停止 ・ <kbd>?speed=N</kbd> で時間倍率';
     parent.appendChild(this.hintEl);
 
     requestAnimationFrame(() => {

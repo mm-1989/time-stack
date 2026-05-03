@@ -116,6 +116,65 @@ canvas {
   color: #6a7388;
 }
 
+/* ---------- スケール切替 ---------- */
+.scale-switch {
+  position: fixed;
+  top: 28px;
+  left: 50%;
+  transform: translate(-50%, -8px);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(8, 12, 22, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 100px;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 1.2s ease 0.6s, transform 1.2s ease 0.6s;
+  z-index: 10;
+}
+.scale-switch.hud-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.scale-btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 8px 16px;
+  border-radius: 100px;
+  color: #7a8398;
+  font: 500 12px/1 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.scale-btn:hover {
+  color: #c0c8d8;
+  background: rgba(255, 255, 255, 0.04);
+}
+.scale-btn.active {
+  color: #f1f4fa;
+  background: rgba(255, 255, 255, 0.08);
+}
+.scale-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px currentColor;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+.scale-btn.active .scale-dot {
+  opacity: 1;
+}
+
 /* ---------- HUD: 下部のヒント ---------- */
 .hud-hint {
   position: fixed;
