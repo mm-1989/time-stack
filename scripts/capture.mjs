@@ -23,15 +23,15 @@ const POLL_TIMEOUT_MS = Number(process.env.POLL_TIMEOUT_MS ?? 300_000);
 // query: BASE_URL に追記するクエリ ('?' は付けない)
 // wait:  goto 後の追加待機 ms (アニメや経過時間反映のため)
 // viewport: { width, height } (省略時は 1280x800)
-// 全シーン共通: since=now で init 画面を skip して直接 grid 起動
+// 全シーン共通: since=now で init 画面 skip、unlock=all で全スケール強制 unlock
 const SCENARIOS = [
-  { name: '01-day-idle', query: 'scale=day&since=now', wait: 1500 },
-  { name: '02-hour-idle', query: 'scale=hour&since=now', wait: 1500 },
-  { name: '03-minute-idle', query: 'scale=minute&since=now', wait: 1500 },
-  { name: '04-hour-mid', query: 'scale=hour&speed=900&since=now', wait: 5000 },
-  { name: '05-collapse', query: 'scale=hour&speed=86400&reset&since=now', wait: 60_020 },
-  { name: '06-mobile-day', query: 'scale=day&since=now', wait: 1500, viewport: { width: 375, height: 812 } },
-  { name: '07-promotion', query: 'scale=minute&debug=promotion&animSlow=4&since=now', wait: 1300, waitUntil: 'domcontentloaded' },
+  { name: '01-day-idle', query: 'scale=day&since=now&unlock=all', wait: 1500 },
+  { name: '02-hour-idle', query: 'scale=hour&since=now&unlock=all', wait: 1500 },
+  { name: '03-minute-idle', query: 'scale=minute&since=now&unlock=all', wait: 1500 },
+  { name: '04-hour-mid', query: 'scale=hour&speed=900&since=now&unlock=all', wait: 5000 },
+  { name: '05-collapse', query: 'scale=hour&speed=86400&reset&since=now&unlock=all', wait: 60_020 },
+  { name: '06-mobile-day', query: 'scale=day&since=now&unlock=all', wait: 1500, viewport: { width: 375, height: 812 } },
+  { name: '07-promotion', query: 'scale=minute&debug=promotion&animSlow=4&since=now&unlock=all', wait: 1300, waitUntil: 'domcontentloaded' },
 ];
 
 function buildUrl(query) {

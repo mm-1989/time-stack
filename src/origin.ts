@@ -16,10 +16,12 @@ export function parseOriginFromUrl(url: URL): Origin | null {
   return { mode: 'custom', date };
 }
 
-/** Origin と現在時刻 (UTC ms) から VirtualClock の initialVirtualMs を計算。 */
+/** Origin と現在時刻 (UTC ms) から VirtualClock の initialVirtualMs を計算。
+ *  NOW モード = 「いまこの瞬間から」 (= virtualMs を 0 起点に)。
+ *  CUSTOM モード = 指定日時からの経過 (= 過去なら大きい値、未来なら 0)。 */
 export function initialMsForOrigin(origin: Origin, nowUtcMs: number): number {
   if (origin.mode === 'now') {
-    return elapsedSinceJstMidnight(nowUtcMs);
+    return 0;
   }
   return Math.max(0, nowUtcMs - origin.date.getTime());
 }

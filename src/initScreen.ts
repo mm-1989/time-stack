@@ -16,11 +16,11 @@ export class InitScreen {
         <div class="init-options">
           <button class="init-opt active" data-opt="now" type="button">
             <span class="init-opt-label">NOW</span>
-            <span class="init-opt-sub">JST 本日 0:00:00 から</span>
+            <span class="init-opt-sub">いまこの瞬間から計測 (スケールが順次アンロック)</span>
           </button>
           <button class="init-opt" data-opt="custom" type="button">
             <span class="init-opt-label">CUSTOM</span>
-            <span class="init-opt-sub">起点日時を指定</span>
+            <span class="init-opt-sub">起点日時を指定 (誕生日 / 記念日 etc.)</span>
           </button>
         </div>
         <div class="init-custom-input hidden">

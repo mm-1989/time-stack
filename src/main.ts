@@ -43,15 +43,43 @@ async function bootstrap(): Promise<void> {
   start(origin);
 }
 
-let clock: VirtualClock;
+let clock: VirtualClock | undefined;
+// progressive unlock モード: NOW モード + ?unlock=all なし のとき有効
+let progressiveUnlock = false;
 
 function start(origin: Origin): void {
   const initialVirtualMs = resetStart ? 0 : initialMsForOrigin(origin, Date.now());
   clock = new VirtualClock(speed, performance.now(), initialVirtualMs);
-  // 起動 INIT オーバーレイを自動消去 (init 画面が出ていた場合は遅延スタート)
+
+  // unlock 状態の初期化:
+  //   ?unlock=all (capture 用) or CUSTOM 起点なら全部 unlocked
+  //   NOW 起点なら progressive (minute だけ unlocked)
+  const unlockAll = params.get('unlock') === 'all';
+  progressiveUnlock = origin.mode === 'now' && !unlockAll;
+  scaleSwitch.setUnlocked('minute', true);
+  scaleSwitch.setUnlocked('hour', !progressiveUnlock);
+  scaleSwitch.setUnlocked('day', !progressiveUnlock);
+  // progressive で起動した場合、初期スケールが未アンロックなら強制で minute へ
+  if (progressiveUnlock && currentScaleId !== 'minute') {
+    currentScaleId = 'minute';
+    grid.transitionTo(scaleToGridOpts('minute'), performance.now());
+    syncMiniScale();
+  }
+
   const initEl = document.getElementById('init-overlay');
   if (initEl) setTimeout(() => initEl.classList.add('gone'), 1500);
   requestAnimationFrame(tick);
+}
+
+/** スケールアンロック演出: 中央に「> NEW SCALE: X」を 2 秒表示 */
+function showUnlockMessage(label: string): void {
+  const msg = document.createElement('div');
+  msg.className = 'tron-message';
+  msg.textContent = `> NEW SCALE: ${label}`;
+  document.body.appendChild(msg);
+  setTimeout(() => msg.classList.add('show'), 30);
+  setTimeout(() => msg.classList.remove('show'), 2200);
+  setTimeout(() => msg.remove(), 3000);
 }
 
 // 初期表示は minute モード (1 秒で 1 マス動くので開始時から動きが見える)
@@ -363,6 +391,18 @@ function tick(now: number): void {
   }
   const virtualMs = clock.tick(now);
   lastVirtualMs = virtualMs;
+  // progressive unlock: NOW モード時、virtualMs 経過で順次バッジが現れる
+  if (progressiveUnlock) {
+    if (virtualMs >= 60_000 && !scaleSwitch.isUnlocked('hour')) {
+      scaleSwitch.setUnlocked('hour', true);
+      showUnlockMessage('1 HOUR');
+    }
+    if (virtualMs >= 3_600_000 && !scaleSwitch.isUnlocked('day')) {
+      scaleSwitch.setUnlocked('day', true);
+      showUnlockMessage('1 DAY');
+    }
+  }
+
   const filled = filledFor(SCALES[currentScaleId], virtualMs);
   grid.setFilled(filled, now);
   checkBoundaries(virtualMs, now);

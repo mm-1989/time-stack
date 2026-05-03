@@ -7,6 +7,7 @@ export class ScaleSwitch {
   private buttons = new Map<ScaleId, HTMLButtonElement>();
   private current: ScaleId;
   private onChange: (id: ScaleId) => void;
+  private unlockedSet = new Set<ScaleId>();
 
   constructor(parent: HTMLElement, initial: ScaleId, onChange: (id: ScaleId) => void) {
     this.current = initial;
@@ -75,6 +76,28 @@ export class ScaleSwitch {
     btn.classList.remove('micropulse');
     void btn.offsetWidth;
     btn.classList.add('micropulse');
+  }
+
+  /** スケールをアンロック / ロック。locked は非表示 (opacity 0 で layout 保持)。
+   *  unlocked への遷移時は just-unlocked クラスで「フッ」と現れるアニメ。 */
+  setUnlocked(id: ScaleId, unlocked: boolean): void {
+    const btn = this.buttons.get(id);
+    if (!btn) return;
+    if (unlocked) {
+      if (this.unlockedSet.has(id)) return;
+      this.unlockedSet.add(id);
+      btn.classList.remove('locked');
+      btn.classList.add('just-unlocked');
+      setTimeout(() => btn.classList.remove('just-unlocked'), 1100);
+    } else {
+      this.unlockedSet.delete(id);
+      btn.classList.remove('just-unlocked');
+      btn.classList.add('locked');
+    }
+  }
+
+  isUnlocked(id: ScaleId): boolean {
+    return this.unlockedSet.has(id);
   }
 
   /** 各バッジに「自スケール内の進捗」(0..1) を CSS 変数で渡す。バッジ下端の細いバーが伸びる */
