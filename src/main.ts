@@ -30,12 +30,38 @@ if (!(currentScaleId in SCALES)) currentScaleId = 'minute';
 const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId));
 grid.setAnimSlow(animSlow);
 const hud = new Hud(document.body);
+const SCALE_INDEX: Record<ScaleId, number> = { minute: 0, hour: 1, day: 2 };
+const SCALE_AT_INDEX: ScaleId[] = ['minute', 'hour', 'day'];
+
 const scaleSwitch = new ScaleSwitch(document.body, currentScaleId, (id) => {
-  currentScaleId = id;
-  grid.transitionTo(scaleToGridOpts(id), performance.now());
-  // スケール切替時に周期 bucket をリセットして、切替直後の擬発火を抑制
-  prevCycleBucket = -1;
+  changeScale(id);
 });
+
+// E: 段階的スケール遷移。minute ↔ day のような遠い切替では、中間スケール (hour)
+// を経由して 2 段階で行う。階層の存在を体感できる。
+function changeScale(newId: ScaleId): void {
+  const oldIdx = SCALE_INDEX[currentScaleId];
+  const newIdx = SCALE_INDEX[newId];
+  const distance = Math.abs(newIdx - oldIdx);
+  if (distance >= 2) {
+    // 中間段階を経由 (oldIdx と newIdx の間のスケール)
+    const midIdx = oldIdx < newIdx ? oldIdx + 1 : oldIdx - 1;
+    const midId = SCALE_AT_INDEX[midIdx];
+    currentScaleId = midId;
+    grid.transitionTo(scaleToGridOpts(midId), performance.now());
+    prevCycleBucket = -1;
+    // 1 段階目完了後 (OUT 380 + IN 520 + stagger ≈ 1100ms) に最終へ
+    window.setTimeout(() => {
+      currentScaleId = newId;
+      grid.transitionTo(scaleToGridOpts(newId), performance.now());
+      prevCycleBucket = -1;
+    }, 1100 * animSlow);
+  } else {
+    currentScaleId = newId;
+    grid.transitionTo(scaleToGridOpts(newId), performance.now());
+    prevCycleBucket = -1;
+  }
+}
 
 // スケール階層: 1 周期完了時にどのバッジへ promotion を飛ばすか
 const PROMOTE_TARGET: Record<ScaleId, ScaleId | null> = {
