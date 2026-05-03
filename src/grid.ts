@@ -32,6 +32,11 @@ export class TimeGrid {
   private prevOpts: GridOptions | null = null;
   private prevFilled = 0;
 
+  // マス完了フラッシュ: idx → 開始時刻
+  private completedFlashes = new Map<number, number>();
+  private prevIntFilled = -1;
+  private static readonly FLASH_MS = 700;
+
   constructor(canvas: HTMLCanvasElement, opts: GridOptions) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
@@ -46,8 +51,17 @@ export class TimeGrid {
     this.canvas.height = Math.max(1, Math.round(cssH * dpr));
   }
 
-  setFilled(filled: number): void {
-    this.filled = Math.max(0, Math.min(this.opts.count, filled));
+  setFilled(filled: number, now?: number): void {
+    const clamped = Math.max(0, Math.min(this.opts.count, filled));
+    const newInt = Math.floor(clamped);
+    if (now !== undefined && this.prevIntFilled >= 0 && this.mode === 'idle') {
+      // 整数マス境界をまたいだものをフラッシュ登録 (skip 等で複数同時もあり得る)
+      for (let i = this.prevIntFilled; i < newInt; i++) {
+        this.completedFlashes.set(i, now);
+      }
+    }
+    this.prevIntFilled = newInt;
+    this.filled = clamped;
   }
 
   /** トランジションなしでスケールを切替 (初期化など) */
@@ -55,21 +69,25 @@ export class TimeGrid {
     this.opts = opts;
     this.mode = 'idle';
     this.prevOpts = null;
+    this.completedFlashes.clear();
+    this.prevIntFilled = -1;
   }
 
   /** スケール切替: OUT(旧グリッド) → IN(新グリッド) のアニメに入る */
   transitionTo(opts: GridOptions, now: number): void {
     if (this.mode !== 'idle') {
-      // 既にトランジション中なら、現在の new を勝者として処理して新トランジションへ
       this.mode = 'idle';
       this.prevOpts = null;
     }
     this.prevOpts = this.opts;
     this.prevFilled = this.filled;
     this.opts = opts;
-    this.filled = 0; // 次の setFilled で新スケール基準の値が来る
+    this.filled = 0;
     this.mode = 'out';
     this.tStart = now;
+    // 新スケールでの境界フラッシュは IN 完了後の次回 setFilled から始める
+    this.completedFlashes.clear();
+    this.prevIntFilled = -1;
   }
 
   private chooseLayout(W: number, H: number, count: number): { cols: number; rows: number } {
@@ -253,6 +271,35 @@ export class TimeGrid {
       ctx.fillStyle = g;
       roundRect(ctx, x, y, w, h, r);
       ctx.fill();
+      // 完了直後のマス: 短いハイライト + 外側に広がる波紋リング
+      const flashStart = this.completedFlashes.get(idx);
+      if (flashStart !== undefined) {
+        const t = (now - flashStart) / TimeGrid.FLASH_MS;
+        if (t >= 1) {
+          this.completedFlashes.delete(idx);
+        } else {
+          const cx = x + w / 2;
+          const cy = y + h / 2;
+          // 1) マスの上に一時的な明るい乗算 (lighter)
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.fillStyle = alphaCol(fillColor, (1 - t) * 0.45);
+          roundRect(ctx, x, y, w, h, r);
+          ctx.fill();
+          ctx.restore();
+          // 2) 外側に広がる波紋リング
+          const eased = 1 - Math.pow(1 - t, 3);
+          const baseR = Math.min(w, h) * 0.5;
+          const ringR = baseR + Math.max(w, h) * 0.9 * eased;
+          ctx.save();
+          ctx.strokeStyle = alphaCol(fillColor, (1 - t) * 0.55);
+          ctx.lineWidth = (1.2 + (1 - t) * 1.8) * this.dpr;
+          ctx.beginPath();
+          ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
     } else if (isCurrent) {
       const subs = opts.subdivisions ?? 0;
       if (subs > 0) {

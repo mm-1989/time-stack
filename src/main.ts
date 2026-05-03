@@ -72,7 +72,7 @@ function maybeUpdateTitle(): void {
 function tick(now: number): void {
   const virtualMs = clock.tick(now);
   const filled = filledFor(SCALES[currentScaleId], virtualMs);
-  grid.setFilled(filled);
+  grid.setFilled(filled, now);
   grid.render(now);
   hud.update(virtualMs, speed, clock.frozen);
   maybeUpdateTitle();
