@@ -3,23 +3,32 @@
 // 設計:
 //   - 入力は filled (0 〜 N の浮動小数)。整数部分は塗り済み、小数部分は進行中マス。
 //   - レイアウトは表示領域 (canvas size) と N から自動算出: アスペクト比に近い cols/rows を選ぶ。
-//   - 描画は requestAnimationFrame ごと (まずは素直に毎フレーム再描画)。
-//   - マスは rounded rect。塗り済み = フル彩度のグラデ、進行中 = 半透明の塗り、未塗 = 暗い枠線のみ。
+//   - スケール切替時は transitionTo() で OUT → IN の 2 段階アニメに入る:
+//     OUT = 旧スケールの進行中マスが画面中央へズームイン、他はフェードアウト
+//     IN  = 新スケールのマスが中央から外側へ stagger で展開
 
 export interface GridOptions {
   count: number;
   scaleLabel: string;
-  fillColor: string; // 例: "#f2c879"
-  emissiveColor?: string; // 進行中マスのハイライト色 (省略時 fillColor)
+  fillColor: string;
 }
+
+type Mode = 'idle' | 'out' | 'in';
+
+const OUT_MS = 380;
+const IN_MS = 520;
 
 export class TimeGrid {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private opts: GridOptions;
   private dpr = 1;
-  /** 塗り目盛 (0 〜 count) */
   private filled = 0;
+
+  private mode: Mode = 'idle';
+  private tStart = 0;
+  private prevOpts: GridOptions | null = null;
+  private prevFilled = 0;
 
   constructor(canvas: HTMLCanvasElement, opts: GridOptions) {
     this.canvas = canvas;
@@ -39,27 +48,42 @@ export class TimeGrid {
     this.filled = Math.max(0, Math.min(this.opts.count, filled));
   }
 
+  /** トランジションなしでスケールを切替 (初期化など) */
   setOptions(opts: GridOptions): void {
     this.opts = opts;
+    this.mode = 'idle';
+    this.prevOpts = null;
   }
 
-  /** N をアスペクト比に合わせて cols × rows に配分 */
-  private chooseLayout(W: number, H: number): { cols: number; rows: number } {
-    const N = this.opts.count;
+  /** スケール切替: OUT(旧グリッド) → IN(新グリッド) のアニメに入る */
+  transitionTo(opts: GridOptions, now: number): void {
+    if (this.mode !== 'idle') {
+      // 既にトランジション中なら、現在の new を勝者として処理して新トランジションへ
+      this.mode = 'idle';
+      this.prevOpts = null;
+    }
+    this.prevOpts = this.opts;
+    this.prevFilled = this.filled;
+    this.opts = opts;
+    this.filled = 0; // 次の setFilled で新スケール基準の値が来る
+    this.mode = 'out';
+    this.tStart = now;
+  }
+
+  private chooseLayout(W: number, H: number, count: number): { cols: number; rows: number } {
     const aspect = W / H;
     let best: { cols: number; rows: number; score: number } | null = null;
-    for (let rows = 1; rows <= N; rows++) {
-      const cols = Math.ceil(N / rows);
-      if (cols * rows < N) continue;
-      // アスペクト比のずれを最小化、かつ無駄マス (cols*rows - N) を抑える
+    for (let rows = 1; rows <= count; rows++) {
+      const cols = Math.ceil(count / rows);
+      if (cols * rows < count) continue;
       const cellAspect = (W / cols) / (H / rows);
-      const aspectErr = Math.abs(Math.log(cellAspect / 1.0)); // セル ≒ 正方形が理想
-      const fillErr = (cols * rows - N) * 0.05;
+      const aspectErr = Math.abs(Math.log(cellAspect / 1.0));
+      const fillErr = (cols * rows - count) * 0.05;
       const layoutErr = Math.abs(Math.log((cols / rows) / aspect)) * 0.5;
       const score = aspectErr + fillErr + layoutErr;
       if (!best || score < best.score) best = { cols, rows, score };
     }
-    return best ?? { cols: N, rows: 1 };
+    return best ?? { cols: count, rows: 1 };
   }
 
   render(now: number): void {
@@ -67,14 +91,28 @@ export class TimeGrid {
     const W = this.canvas.width;
     const H = this.canvas.height;
 
-    // 背景: 縦グラデ
+    // 背景
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, '#0a0e1c');
     g.addColorStop(1, '#02030a');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
-    // グリッドの占有領域 (中央、上下左右に余白)
+    // モード遷移チェック
+    if (this.mode === 'out' && now - this.tStart >= OUT_MS) {
+      this.mode = 'in';
+      this.tStart = now;
+    }
+    if (this.mode === 'in' && now - this.tStart >= IN_MS + this.staggerDuration()) {
+      this.mode = 'idle';
+      this.prevOpts = null;
+    }
+
+    // ラベル: idle/in は新スケール、out は旧スケール
+    const labelOpts = this.mode === 'out' && this.prevOpts ? this.prevOpts : this.opts;
+    this.drawHeaderLabel(W, H, labelOpts);
+
+    // グリッド占有領域
     const padX = W * 0.08;
     const padTop = H * 0.18;
     const padBot = H * 0.18;
@@ -83,55 +121,130 @@ export class TimeGrid {
     const areaW = W - padX * 2;
     const areaH = H - padTop - padBot;
 
-    const { cols, rows } = this.chooseLayout(areaW, areaH);
+    if (this.mode === 'out' && this.prevOpts) {
+      this.renderGrid(this.prevOpts, this.prevFilled, areaX, areaY, areaW, areaH, now, 'out');
+    } else if (this.mode === 'in') {
+      this.renderGrid(this.opts, this.filled, areaX, areaY, areaW, areaH, now, 'in');
+    } else {
+      this.renderGrid(this.opts, this.filled, areaX, areaY, areaW, areaH, now, 'idle');
+    }
+
+    // 下部進捗バーは idle 時のみ
+    if (this.mode === 'idle') {
+      this.drawProgress(W, areaX, areaW, padBot, this.filled, this.opts.count, this.opts.fillColor);
+    }
+  }
+
+  private staggerDuration(): number {
+    // IN フェーズで、最後のマスの遅延分も含めた総時間
+    return Math.min(this.opts.count, 60) * 5;
+  }
+
+  private renderGrid(
+    opts: GridOptions,
+    filled: number,
+    areaX: number,
+    areaY: number,
+    areaW: number,
+    areaH: number,
+    now: number,
+    phase: Mode,
+  ): void {
+    const { cols, rows } = this.chooseLayout(areaW, areaH, opts.count);
     const gap = Math.max(2, Math.min(areaW / cols, areaH / rows) * 0.12);
     const cellW = (areaW - gap * (cols - 1)) / cols;
     const cellH = (areaH - gap * (rows - 1)) / rows;
     const radius = Math.min(cellW, cellH) * 0.18;
 
-    const N = this.opts.count;
-    const filled = this.filled;
+    const N = opts.count;
     const intFilled = Math.floor(filled);
     const fracFilled = filled - intFilled;
+
+    const screenCx = this.canvas.width / 2;
+    const screenCy = this.canvas.height / 2;
 
     for (let i = 0; i < N; i++) {
       const r = Math.floor(i / cols);
       const c = i % cols;
       const x = areaX + c * (cellW + gap);
       const y = areaY + r * (cellH + gap);
-      this.drawCell(x, y, cellW, cellH, radius, i, intFilled, fracFilled, now);
-    }
+      const cellCx = x + cellW / 2;
+      const cellCy = y + cellH / 2;
 
-    // 上部ラベル
-    this.drawHeaderLabel(W, H, now);
-    // 下部進捗バー
-    this.drawProgress(W, H, areaX, areaW, padBot, filled, N);
+      let tx = cellCx;
+      let ty = cellCy;
+      let scale = 1;
+      let alpha = 1;
+
+      if (phase === 'out') {
+        const t = Math.min(1, (now - this.tStart) / OUT_MS);
+        const eased = easeInQuad(t);
+        if (i === intFilled) {
+          // 進行中マス: 中央へ引き寄せ + 拡大
+          const e2 = easeOutCubic(t);
+          tx = cellCx + (screenCx - cellCx) * e2;
+          ty = cellCy + (screenCy - cellCy) * e2;
+          scale = 1 + 1.6 * e2;
+          alpha = 1;
+        } else {
+          // その他: 本来位置で縮小フェードアウト
+          scale = 1 - eased;
+          alpha = 1 - eased;
+        }
+      } else if (phase === 'in') {
+        // stagger: マス順で 0..(N-1)*5ms 遅延
+        const delay = i * 5;
+        const local = (now - this.tStart - delay) / IN_MS;
+        const t = Math.max(0, Math.min(1, local));
+        const eased = easeOutBack(t);
+        // 中央から本来位置へ展開
+        tx = screenCx + (cellCx - screenCx) * eased;
+        ty = screenCy + (cellCy - screenCy) * eased;
+        scale = Math.max(0, eased);
+        alpha = Math.min(1, t * 1.5);
+      }
+
+      if (scale <= 0.001 || alpha <= 0.001) continue;
+
+      this.drawCellAt(
+        cellCx, cellCy, cellW, cellH, radius,
+        tx, ty, scale, alpha,
+        i, intFilled, fracFilled, opts, now,
+      );
+    }
   }
 
-  private drawCell(
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    r: number,
-    idx: number,
-    intFilled: number,
-    fracFilled: number,
-    now: number,
+  private drawCellAt(
+    baseCx: number, baseCy: number, cellW: number, cellH: number, radius: number,
+    drawCx: number, drawCy: number, scale: number, alpha: number,
+    idx: number, intFilled: number, fracFilled: number, opts: GridOptions, now: number,
+  ): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(drawCx, drawCy);
+    ctx.scale(scale, scale);
+    ctx.translate(-baseCx, -baseCy);
+    this.drawCellRaw(baseCx - cellW / 2, baseCy - cellH / 2, cellW, cellH, radius, idx, intFilled, fracFilled, opts, now);
+    ctx.restore();
+  }
+
+  private drawCellRaw(
+    x: number, y: number, w: number, h: number, r: number,
+    idx: number, intFilled: number, fracFilled: number, opts: GridOptions, now: number,
   ): void {
     const { ctx } = this;
     const isFilled = idx < intFilled;
     const isCurrent = idx === intFilled;
-    const fillColor = this.opts.fillColor;
+    const fillColor = opts.fillColor;
 
-    // セル枠 (常時)
+    // 枠線
     ctx.strokeStyle = isFilled || isCurrent ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)';
     ctx.lineWidth = 1 * this.dpr;
     roundRect(ctx, x, y, w, h, r);
     ctx.stroke();
 
     if (isFilled) {
-      // 完全に塗られたマス: グラデ + わずかなインナーシャドウ風
       const g = ctx.createLinearGradient(x, y, x, y + h);
       g.addColorStop(0, fillColor);
       g.addColorStop(1, shade(fillColor, -0.25));
@@ -139,29 +252,25 @@ export class TimeGrid {
       roundRect(ctx, x, y, w, h, r);
       ctx.fill();
     } else if (isCurrent) {
-      // 進行中マス: 下から上へ進捗で塗る + 脈動
       const fillH = h * fracFilled;
       const fillY = y + h - fillH;
       ctx.save();
       roundRect(ctx, x, y, w, h, r);
       ctx.clip();
-      // 進捗塗り
       const g = ctx.createLinearGradient(x, fillY, x, y + h);
-      g.addColorStop(0, alpha(fillColor, 0.95));
-      g.addColorStop(1, alpha(shade(fillColor, -0.4), 0.85));
+      g.addColorStop(0, alphaCol(fillColor, 0.95));
+      g.addColorStop(1, alphaCol(shade(fillColor, -0.4), 0.85));
       ctx.fillStyle = g;
       ctx.fillRect(x, fillY, w, fillH);
-      // 進捗の上端に細いハイライト線
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
       ctx.fillRect(x, fillY - 0.5 * this.dpr, w, 1 * this.dpr);
       ctx.restore();
 
-      // 脈動 (シマー)
       const pulse = 0.5 + 0.5 * Math.sin(now * 0.004);
       ctx.save();
       ctx.shadowColor = fillColor;
       ctx.shadowBlur = (8 + pulse * 6) * this.dpr;
-      ctx.strokeStyle = alpha(fillColor, 0.35 + pulse * 0.4);
+      ctx.strokeStyle = alphaCol(fillColor, 0.35 + pulse * 0.4);
       ctx.lineWidth = 1.2 * this.dpr;
       roundRect(ctx, x, y, w, h, r);
       ctx.stroke();
@@ -169,38 +278,29 @@ export class TimeGrid {
     }
   }
 
-  private drawHeaderLabel(W: number, H: number, _now: number): void {
+  private drawHeaderLabel(W: number, _H: number, opts: GridOptions): void {
     const { ctx } = this;
     ctx.save();
     ctx.fillStyle = '#7a8398';
     ctx.font = `${12 * this.dpr}px ui-monospace, "SF Mono", monospace`;
     ctx.textBaseline = 'top';
     ctx.textAlign = 'center';
-    ctx.letterSpacing = '0.2em';
-    ctx.fillText(this.opts.scaleLabel.toUpperCase(), W / 2, H * 0.06);
+    ctx.fillText(opts.scaleLabel.toUpperCase(), W / 2, this.canvas.height * 0.06);
     ctx.restore();
   }
 
   private drawProgress(
-    W: number,
-    _H: number,
-    areaX: number,
-    areaW: number,
-    padBot: number,
-    filled: number,
-    N: number,
+    W: number, areaX: number, areaW: number, padBot: number,
+    filled: number, N: number, color: string,
   ): void {
     const { ctx } = this;
     const barH = 2 * this.dpr;
     const y = this.canvas.height - padBot * 0.55;
-    // 背景バー
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.fillRect(areaX, y, areaW, barH);
-    // 進捗バー
     const ratio = filled / N;
-    ctx.fillStyle = this.opts.fillColor;
+    ctx.fillStyle = color;
     ctx.fillRect(areaX, y, areaW * ratio, barH);
-    // テキスト
     ctx.fillStyle = '#9ca3af';
     ctx.font = `${11 * this.dpr}px ui-monospace, monospace`;
     ctx.textAlign = 'left';
@@ -214,11 +314,7 @@ export class TimeGrid {
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
+  x: number, y: number, w: number, h: number, r: number,
 ): void {
   const rr = Math.min(r, Math.min(w, h) / 2);
   ctx.beginPath();
@@ -234,13 +330,12 @@ function roundRect(
   ctx.closePath();
 }
 
-function alpha(hex: string, a: number): string {
+function alphaCol(hex: string, a: number): string {
   const { r, g, b } = parseHex(hex);
   return `rgba(${r},${g},${b},${a})`;
 }
 
 function shade(hex: string, factor: number): string {
-  // factor: 負で暗く、正で明るく (-1..+1)
   const { r, g, b } = parseHex(hex);
   const k = 1 + factor;
   const cl = (v: number) => Math.max(0, Math.min(255, Math.round(v * k)));
@@ -251,4 +346,12 @@ function parseHex(hex: string): { r: number; g: number; b: number } {
   const h = hex.replace('#', '');
   const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
   return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff };
+}
+
+function easeInQuad(t: number): number { return t * t; }
+function easeOutCubic(t: number): number { return 1 - Math.pow(1 - t, 3); }
+function easeOutBack(t: number): number {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }

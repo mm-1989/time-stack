@@ -22,7 +22,7 @@ const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId));
 const hud = new Hud(document.body);
 new ScaleSwitch(document.body, currentScaleId, (id) => {
   currentScaleId = id;
-  grid.setOptions(scaleToGridOpts(id));
+  grid.transitionTo(scaleToGridOpts(id), performance.now());
 });
 
 function scaleToGridOpts(id: ScaleId): {
