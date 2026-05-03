@@ -4,6 +4,7 @@ import { TimeGrid } from './grid';
 import { Hud } from './hud';
 import { SCALES, filledFor, type ScaleId } from './scales';
 import { ScaleSwitch } from './scaleSwitch';
+import { MiniGrid } from './miniGrid';
 import { makePromotion } from './promotion';
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -30,6 +31,7 @@ if (!(currentScaleId in SCALES)) currentScaleId = 'minute';
 const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId));
 grid.setAnimSlow(animSlow);
 const hud = new Hud(document.body);
+const miniGrid = new MiniGrid(document.body);
 const SCALE_INDEX: Record<ScaleId, number> = { minute: 0, hour: 1, day: 2 };
 const SCALE_AT_INDEX: ScaleId[] = ['minute', 'hour', 'day'];
 
@@ -50,18 +52,26 @@ function changeScale(newId: ScaleId): void {
     currentScaleId = midId;
     grid.transitionTo(scaleToGridOpts(midId), performance.now());
     prevCycleBucket = -1;
+    syncMiniScale();
     // 1 段階目完了後 (OUT 380 + IN 520 + stagger ≈ 1100ms) に最終へ
     window.setTimeout(() => {
       currentScaleId = newId;
       grid.transitionTo(scaleToGridOpts(newId), performance.now());
       prevCycleBucket = -1;
+      syncMiniScale();
     }, 1100 * animSlow);
   } else {
     currentScaleId = newId;
     grid.transitionTo(scaleToGridOpts(newId), performance.now());
     prevCycleBucket = -1;
+    syncMiniScale();
   }
 }
+
+function syncMiniScale(): void {
+  miniGrid.setScale(PROMOTE_TARGET[currentScaleId]);
+}
+syncMiniScale();
 
 // スケール階層: 1 周期完了時にどのバッジへ promotion を飛ばすか
 const PROMOTE_TARGET: Record<ScaleId, ScaleId | null> = {
@@ -246,6 +256,11 @@ function tick(now: number): void {
     hour: filledFor(SCALES.hour, virtualMs) / SCALES.hour.count,
     day: filledFor(SCALES.day, virtualMs) / SCALES.day.count,
   });
+  // ミニ上位ビュー更新 (A 案)
+  const upperId = PROMOTE_TARGET[currentScaleId];
+  if (upperId) {
+    miniGrid.setFilled(filledFor(SCALES[upperId], virtualMs));
+  }
   grid.render(now);
   hud.update(virtualMs, speed, clock.frozen);
   maybeUpdateTitle();

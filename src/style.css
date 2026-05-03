@@ -290,6 +290,65 @@ canvas {
   letter-spacing: 0.04em;
 }
 
+/* ---------- ミニチュア上位ビュー ---------- */
+.mini-grid {
+  position: fixed;
+  top: 80px;
+  right: 28px;
+  padding: 8px 10px 9px;
+  background: rgba(8, 12, 22, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  z-index: 9;
+  user-select: none;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.6s ease 0.6s, transform 0.6s ease 0.6s;
+}
+body:not(.hud-loading) .mini-grid:not(.hidden) {
+  opacity: 1;
+  transform: translateY(0);
+}
+.mini-grid.hidden {
+  display: none;
+}
+.mini-grid-label {
+  font: 500 10px/1 ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  color: #7a8398;
+  margin-bottom: 6px;
+  text-align: right;
+}
+.mini-grid-cells {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 12), 1fr);
+  gap: 2px;
+}
+.mini-cell {
+  width: 6px;
+  height: 4px;
+  background: var(--mini-color, #fff5d0);
+  border-radius: 1px;
+  transition: opacity 0.2s ease;
+}
+.mini-cell-current {
+  box-shadow: 0 0 4px var(--mini-color, #fff5d0);
+}
+@media (max-width: 640px) {
+  .mini-grid {
+    top: 80px;
+    right: 14px;
+    padding: 6px 8px 7px;
+  }
+  .mini-cell {
+    width: 4px;
+    height: 3px;
+  }
+}
+
 /* ---------- マスホバーツールチップ ---------- */
 .cell-tooltip {
   position: fixed;
