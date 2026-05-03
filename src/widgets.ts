@@ -7,13 +7,16 @@ import { SCALES, type ScaleId } from './scales';
 
 /** 右下のサウンド ON/OFF インジケータ DOM。クリックで toggle。 */
 export function setupSoundIndicator(): { refresh: () => void } {
-  const el = document.createElement('div');
+  const el = document.createElement('button');
   el.className = 'sound-indicator';
+  el.type = 'button';
   el.title = 'S キーでオンオフ';
+  el.setAttribute('aria-label', 'サウンド ON/OFF 切替');
   document.body.appendChild(el);
   const refresh = () => {
     el.textContent = isMuted() ? '♪ MUTED' : '♪ ON';
     el.classList.toggle('on', !isMuted());
+    el.setAttribute('aria-pressed', isMuted() ? 'false' : 'true');
   };
   refresh();
   el.addEventListener('click', () => {

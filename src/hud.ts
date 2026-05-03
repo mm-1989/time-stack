@@ -15,10 +15,13 @@ export class Hud {
   constructor(parent: HTMLElement) {
     this.wrap = document.createElement('div');
     this.wrap.className = 'hud';
+    this.wrap.setAttribute('role', 'status');
+    this.wrap.setAttribute('aria-live', 'off'); // 毎秒変動するので screen reader 読み上げは off
     parent.appendChild(this.wrap);
 
     this.elapsedEl = document.createElement('div');
     this.elapsedEl.className = 'hud-time';
+    this.elapsedEl.setAttribute('aria-label', '経過時間');
     this.wrap.appendChild(this.elapsedEl);
 
     this.subEl = document.createElement('div');

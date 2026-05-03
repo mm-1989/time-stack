@@ -10,9 +10,12 @@ export class InitScreen {
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
     this.root.className = 'init-screen';
+    this.root.setAttribute('role', 'dialog');
+    this.root.setAttribute('aria-modal', 'true');
+    this.root.setAttribute('aria-labelledby', 'init-title');
     this.root.innerHTML = `
       <div class="init-panel">
-        <div class="init-title">&gt;&nbsp;SELECT ORIGIN</div>
+        <div class="init-title" id="init-title">&gt;&nbsp;SELECT ORIGIN</div>
         <div class="init-options">
           <button class="init-opt active" data-opt="now" type="button">
             <span class="init-opt-label">NOW</span>

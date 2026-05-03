@@ -15,6 +15,8 @@ export class ScaleSwitch {
 
     this.root = document.createElement('div');
     this.root.className = 'scale-switch';
+    this.root.setAttribute('role', 'tablist');
+    this.root.setAttribute('aria-label', 'スケール切替');
     parent.appendChild(this.root);
 
     for (const id of SCALE_ORDER) {
@@ -22,7 +24,10 @@ export class ScaleSwitch {
       btn.className = 'scale-btn';
       btn.type = 'button';
       btn.dataset.scale = id;
-      btn.innerHTML = `<span class="scale-dot" style="background:${SCALES[id].fillColor}"></span><span class="scale-label">${SCALES[id].shortLabel}</span>`;
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-label', `${SCALES[id].label} に切替`);
+      btn.setAttribute('aria-selected', initial === id ? 'true' : 'false');
+      btn.innerHTML = `<span class="scale-dot" style="background:${SCALES[id].fillColor}" aria-hidden="true"></span><span class="scale-label">${SCALES[id].shortLabel}</span>`;
       btn.addEventListener('click', () => this.set(id));
       this.root.appendChild(btn);
       this.buttons.set(id, btn);
@@ -112,7 +117,9 @@ export class ScaleSwitch {
 
   private refresh(): void {
     for (const [id, btn] of this.buttons) {
-      btn.classList.toggle('active', id === this.current);
+      const isActive = id === this.current;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
     }
   }
 }

@@ -1,0 +1,21 @@
+{
+  "name": "time-stack",
+  "short_name": "time-stack",
+  "description": "時間の経過を平面グリッドで体感する Canvas 2D ビジュアライザ (TRON 風)",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "ja"
+}

@@ -24,6 +24,17 @@ const animSlow = Math.max(0.1, parseFloat(params.get('animSlow') ?? '1'));
 const resetStart = params.has('reset');
 const debug = params.get('debug');
 
+// PWA: 本番ビルド (import.meta.env.PROD) のときだけ Service Worker を登録。
+// dev 環境では SW を登録しない (localhost SW hijack を構造的に回避、
+// feedback_localhost_sw_hijack.md の教訓)。
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {
+      /* SW 登録失敗は無視 (=非対応ブラウザ等) */
+    });
+  });
+}
+
 // ?audioTest=1 のときは通常 UI 起動を skip して 3 秒の WAV だけ合成
 if (maybeRunAudioTest(params)) {
   // bootstrap は呼ばない (early exit)
@@ -37,6 +48,8 @@ function initApp(): void {
   if (!app) throw new Error('missing #app');
   const canvas = document.createElement('canvas');
   canvas.className = 'time-canvas';
+  canvas.setAttribute('role', 'img');
+  canvas.setAttribute('aria-label', '時間グリッドのビジュアライザ');
   app.appendChild(canvas);
 
   // ===== 3. 状態 =====
