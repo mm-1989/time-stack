@@ -32,8 +32,10 @@ const SCENARIOS = [
   // +20ms で集約の極初期 (マスが画面端に残りつつ中央へ動き出した瞬間)
   { name: '05-collapse', query: 'scale=hour&speed=86400&reset', wait: 60_020 },
   { name: '06-mobile-day', query: 'scale=day', wait: 1500, viewport: { width: 375, height: 812 } },
-  // promotion フライト中盤を狙う: 起動 200ms 後に発射 + 800ms duration、wait 600ms = 飛行 50% 地点
-  { name: '07-promotion', query: 'scale=minute&debug=promotion', wait: 600 },
+  // promotion フライト中盤を狙う。waitUntil: 'domcontentloaded' で goto を早く完了させ、
+  // setTimeout(200) → 800ms duration、wait 600ms で domcontentloaded 後 ~400ms = 飛行 50% 地点。
+  // (networkidle だと 500ms+ 待つ間に飛行が終わってしまう)
+  { name: '07-promotion', query: 'scale=minute&debug=promotion', wait: 600, waitUntil: 'domcontentloaded' },
 ];
 
 function buildUrl(query) {
@@ -100,7 +102,7 @@ async function main() {
       const page = await ctx.newPage();
       const url = buildUrl(s.query);
       console.log(`→ ${s.name} (${viewport.width}×${viewport.height}) ${url}`);
-      await page.goto(url, { waitUntil: 'networkidle' });
+      await page.goto(url, { waitUntil: s.waitUntil ?? 'networkidle' });
       if (s.wait > 0) await page.waitForTimeout(s.wait);
       await page.screenshot({ path: `${OUT_DIR}/${s.name}.png`, fullPage: false });
       await ctx.close();
