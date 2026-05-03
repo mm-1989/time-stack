@@ -285,7 +285,7 @@ export class TimeGrid {
 
     // 下部進捗バーは idle 時のみ
     if (this.mode === 'idle') {
-      this.drawProgress(W, areaX, areaW, padBot, this.filled, this.opts.count, this.opts.fillColor);
+      this.drawProgress(W, areaX, areaW, padBot, this.filled, this.opts);
     }
 
     // 時刻境界エフェクト (一番前面に重ねる)
@@ -647,20 +647,19 @@ export class TimeGrid {
       ctx.fillRect(x, barY, w, 1.2 * this.dpr);
       ctx.restore();
 
-      // 進行中マスの下に「N + unit」ラベル(例: 14h / 35m / 47s)
-      // 「グリッドだけ見て今どこか」を一目化する。可読性重視で weight 700 + 白系。
+      // 進行中マスの真下に「N + unit」ラベル(例: 14h / 35m / 47s)
+      // boost で大きくなったマスにぴったり接するように距離を詰めて、フォントも追従。
       const unit = opts.unit;
       if (unit) {
-        const fontSize = Math.max(11, Math.min(20, Math.min(w, h) * 0.22));
+        const fontSize = Math.max(12, Math.min(22, Math.min(w, h) * 0.24));
         ctx.save();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-        ctx.font = `700 ${fontSize}px ui-monospace, "SF Mono", Menlo, monospace`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.font = `700 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        // 細い影でコントラスト確保
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
         ctx.shadowBlur = 6 * this.dpr;
-        ctx.fillText(`${idx}${unit}`, x + w / 2, y + h + 6 * this.dpr);
+        ctx.fillText(`${idx}${unit}`, x + w / 2, y + h + 2 * this.dpr);
         ctx.restore();
       }
     }
@@ -712,21 +711,15 @@ export class TimeGrid {
         ctx.arc(cx, cy, dotR, 0, Math.PI * 2);
         ctx.fill();
       } else if (i === subInt) {
-        // 進行中サブ粒子: 大きく + 派手な脈動 + 中心の白い芯で「今ここ」を強調
+        // 進行中サブ粒子: 全体を白で塗る (=「先頭」の明示) + 周囲に色 glow
         const pulse = 0.5 + 0.5 * Math.sin(now * 0.012);
-        const sz = dotR * (1.1 + pulse * 0.5);
+        const sz = dotR * (1.15 + pulse * 0.5);
         ctx.save();
         ctx.shadowColor = color;
-        ctx.shadowBlur = (8 + pulse * 10) * this.dpr;
-        ctx.fillStyle = alphaCol(color, 0.7 + pulse * 0.3);
+        ctx.shadowBlur = (10 + pulse * 12) * this.dpr;
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.85 + pulse * 0.15})`;
         ctx.beginPath();
         ctx.arc(cx, cy, sz, 0, Math.PI * 2);
-        ctx.fill();
-        // 中心の白い芯
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = `rgba(255,255,255,${0.4 + pulse * 0.45})`;
-        ctx.beginPath();
-        ctx.arc(cx, cy, sz * 0.4, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       } else {
@@ -794,15 +787,15 @@ export class TimeGrid {
 
   private drawProgress(
     W: number, areaX: number, areaW: number, padBot: number,
-    filled: number, N: number, color: string,
+    filled: number, opts: GridOptions,
   ): void {
     const { ctx } = this;
+    const N = opts.count;
+    const color = opts.fillColor;
     const barH = 1 * this.dpr;
     const y = this.canvas.height - padBot * 0.55;
-    // 背景レール (細く、ほぼ透明)
     ctx.fillStyle = 'rgba(0, 245, 255, 0.08)';
     ctx.fillRect(areaX, y, areaW, barH);
-    // 進捗 (発光)
     const ratio = filled / N;
     ctx.save();
     ctx.shadowColor = color;
@@ -810,16 +803,42 @@ export class TimeGrid {
     ctx.fillStyle = color;
     ctx.fillRect(areaX, y, areaW * ratio, barH);
     ctx.restore();
-    // テキスト (etched)
-    ctx.fillStyle = 'rgba(0, 245, 255, 0.35)';
+    // テキスト: 自然語化 (scale ごとに単位付き)
+    const left = formatElapsed(filled, opts);
+    const right = `${(ratio * 100).toFixed(1)}% of ${cycleLabel(opts)}`;
+    ctx.fillStyle = 'rgba(0, 245, 255, 0.45)';
     ctx.font = `500 ${10 * this.dpr}px "JetBrains Mono", ui-monospace, monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(`${filled.toFixed(2)} / ${N}`, areaX, y + 10 * this.dpr);
+    ctx.fillText(left, areaX, y + 10 * this.dpr);
     ctx.textAlign = 'right';
-    ctx.fillText(`${(ratio * 100).toFixed(1)}%`, areaX + areaW, y + 10 * this.dpr);
+    ctx.fillText(right, areaX + areaW, y + 10 * this.dpr);
     void W;
   }
+}
+
+/** 進捗バー左側: filled を「14H 36M ELAPSED」のような自然語に */
+function formatElapsed(filled: number, opts: GridOptions): string {
+  const unit = opts.unit;
+  const intF = Math.floor(filled);
+  const frac = filled - intF;
+  if (unit === 'h') {
+    const subMin = Math.floor(frac * 60);
+    return `${intF}H ${subMin}M ELAPSED`;
+  }
+  if (unit === 'm') {
+    const subSec = Math.floor(frac * 60);
+    return `${intF}M ${subSec}S ELAPSED`;
+  }
+  return `${filled.toFixed(2)}S ELAPSED`;
+}
+
+/** 進捗バー右側: スケール名 */
+function cycleLabel(opts: GridOptions): string {
+  const unit = opts.unit;
+  if (unit === 'h') return 'DAY';
+  if (unit === 'm') return 'HOUR';
+  return 'MINUTE';
 }
 
 function roundRect(

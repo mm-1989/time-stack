@@ -104,6 +104,100 @@ body::after {
   }
 }
 
+/* TRON: 起動 INIT オーバーレイ (auto fade-out) */
+.init-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font: 700 22px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--tron-cyan);
+  text-shadow: 0 0 14px rgba(0, 245, 255, 0.7), 0 0 28px rgba(0, 245, 255, 0.4);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--tron-line-strong);
+  padding: 18px 28px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 60;
+  animation: init-fade 1.4s ease forwards;
+  white-space: nowrap;
+}
+@keyframes init-fade {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  72% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.04); }
+}
+.init-overlay.gone {
+  display: none;
+}
+@media (max-width: 640px) {
+  .init-overlay {
+    font-size: 14px;
+    padding: 14px 18px;
+    letter-spacing: 0.2em;
+  }
+}
+
+/* TRON: freeze 時の PAUSED オーバーレイ (Space で toggle) */
+.paused-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.96);
+  font: 700 28px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: var(--tron-orange);
+  text-shadow: 0 0 16px rgba(255, 122, 0, 0.7), 0 0 32px rgba(255, 122, 0, 0.4);
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 122, 0, 0.6);
+  padding: 22px 36px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 55;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.paused-overlay.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+@media (max-width: 640px) {
+  .paused-overlay {
+    font-size: 16px;
+    padding: 14px 22px;
+    letter-spacing: 0.22em;
+  }
+}
+
+/* フッター情報 (右下、非常に控えめ) */
+.footer-info {
+  position: fixed;
+  right: 48px;
+  bottom: 18px;
+  font: 400 9px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(0, 245, 255, 0.32);
+  text-decoration: none;
+  z-index: 5;
+  pointer-events: auto;
+  transition: color 0.2s ease;
+}
+.footer-info:hover {
+  color: var(--tron-cyan);
+}
+@media (max-width: 640px) {
+  .footer-info {
+    right: 36px;
+    bottom: 12px;
+    font-size: 8px;
+  }
+}
+
 /* TRON: イースターエッグ メッセージ overlay */
 .tron-message {
   position: fixed;

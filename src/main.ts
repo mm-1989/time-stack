@@ -107,10 +107,20 @@ function fitCanvas(): void {
 fitCanvas();
 window.addEventListener('resize', fitCanvas);
 
+// 起動 INIT オーバーレイを自動消去 (animation 完了後 1.5s で DOM から削除)
+const initEl = document.getElementById('init-overlay');
+if (initEl) {
+  setTimeout(() => initEl.classList.add('gone'), 1500);
+}
+
+// freeze 状態の PAUSED オーバーレイ
+const pausedEl = document.getElementById('paused-overlay');
+
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
     e.preventDefault();
     clock.toggleFreeze();
+    pausedEl?.classList.toggle('show', clock.frozen);
   }
 });
 
