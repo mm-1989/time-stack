@@ -35,7 +35,6 @@ export class ScaleSwitch {
       if (e.code === 'KeyM') this.set('minute');
       else if (e.code === 'KeyH') this.set('hour');
       else if (e.code === 'KeyD') this.set('day');
-      else if (e.code === 'KeyW') this.set('week');
       else if (e.code === 'BracketLeft' || e.code === 'BracketRight') {
         const dir = e.code === 'BracketRight' ? 1 : -1;
         const i = SCALE_ORDER.indexOf(this.current);

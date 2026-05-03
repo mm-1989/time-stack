@@ -355,7 +355,6 @@ body::after {
 .scale-btn[data-scale="minute"] { --btn-color: #00f5ff; }
 .scale-btn[data-scale="hour"] { --btn-color: #4ad8ff; }
 .scale-btn[data-scale="day"] { --btn-color: #ff7a00; }
-.scale-btn[data-scale="week"] { --btn-color: #ff4a00; }
 .scale-btn:hover {
   color: var(--tron-cyan);
   background: rgba(0, 245, 255, 0.04);

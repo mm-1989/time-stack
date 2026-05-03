@@ -1,6 +1,6 @@
 // 時間スケールの定義。3 つのスケールで「同じグリッド」を異なる単位で見る。
 
-export type ScaleId = 'minute' | 'hour' | 'day' | 'week';
+export type ScaleId = 'minute' | 'hour' | 'day';
 
 export interface Scale {
   id: ScaleId;
@@ -19,7 +19,7 @@ export interface Scale {
   /** 1 マス内に描く下位粒子の数 (0 で粒子なし)。進行中マスでのみ可視化 */
   subdivisions: number;
   /** 各マスが表す単位 (進行中マス下のラベル用) */
-  unit: 'h' | 'm' | 's' | 'd';
+  unit: 'h' | 'm' | 's';
 }
 
 export const SCALES: Record<ScaleId, Scale> = {
@@ -52,24 +52,13 @@ export const SCALES: Record<ScaleId, Scale> = {
     periodMs: 86_400_000,
     label: '1 day · 24 hours',
     shortLabel: '1 day',
-    fillColor: '#ff7a00', // TRON orange accent
+    fillColor: '#ff7a00', // TRON orange accent (top of hierarchy)
     subdivisions: 60, // 1 時間マス内に 60 分粒子
     unit: 'h',
   },
-  week: {
-    id: 'week',
-    count: 7,
-    msPerCell: 86_400_000, // 1 day
-    periodMs: 7 * 86_400_000,
-    label: '1 week · 7 days',
-    shortLabel: '1 week',
-    fillColor: '#ff4a00', // TRON deeper orange (top of hierarchy)
-    subdivisions: 24, // 1 日マス内に 24 時間粒子
-    unit: 'd',
-  },
 };
 
-export const SCALE_ORDER: ScaleId[] = ['minute', 'hour', 'day', 'week'];
+export const SCALE_ORDER: ScaleId[] = ['minute', 'hour', 'day'];
 
 /** virtualMs から、当該スケールの現在の塗り目盛 (0 〜 count) を計算 */
 export function filledFor(scale: Scale, virtualMs: number): number {
