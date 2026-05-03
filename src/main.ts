@@ -6,7 +6,7 @@ import { SCALES, filledFor, type ScaleId } from './scales';
 import { ScaleSwitch } from './scaleSwitch';
 import { MiniGrid } from './miniGrid';
 import { makePromotion } from './promotion';
-import { playTick, playChime, playPromote, setMuted, isMuted, recordAudioSample } from './audio';
+import { playTick, playChime, playPromote, setMuted, isMuted, recordAudioSample, warmupAudio } from './audio';
 import { InitScreen } from './initScreen';
 import { parseOriginFromUrl, initialMsForOrigin, formatDateForUrl, type Origin } from './origin';
 
@@ -44,6 +44,9 @@ async function bootstrap(): Promise<void> {
   } else {
     const init = new InitScreen(document.body);
     origin = await init.show();
+    // BEGIN クリックは user gesture: ここで AudioContext を resume させる
+    // (iOS Safari は user gesture handler 内で resume を呼ばないと音が出ない)
+    warmupAudio();
     if (origin.mode === 'custom') {
       // 選択結果を URL に反映 (リロードや共有しても同じ起点)
       const u = new URL(location.href);
@@ -53,6 +56,15 @@ async function bootstrap(): Promise<void> {
   }
   start(origin);
 }
+
+// iOS 保険: 任意の最初のクリック/キー入力でも warmupAudio を呼ぶ
+const oneShotWarmup = () => {
+  warmupAudio();
+  window.removeEventListener('pointerdown', oneShotWarmup);
+  window.removeEventListener('keydown', oneShotWarmup);
+};
+window.addEventListener('pointerdown', oneShotWarmup, { once: true });
+window.addEventListener('keydown', oneShotWarmup, { once: true });
 
 let clock: VirtualClock | undefined;
 // progressive unlock モード: NOW モード + ?unlock=all なし のとき有効

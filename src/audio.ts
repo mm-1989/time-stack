@@ -12,11 +12,23 @@ let muted = false;
 
 export function setMuted(m: boolean): void {
   muted = m;
-  // unmute 時に context を ensure (ユーザインタラクション後の前提)
-  if (!muted) ensureCtx()?.resume?.();
+  if (!muted) warmupAudio();
 }
 export function isMuted(): boolean {
   return muted;
+}
+
+/**
+ * AudioContext を確実に running 状態にする。iOS Safari は autoplay policy が
+ * 厳しく、user gesture (click/keydown) の handler 内で resume() を明示的に
+ * 呼ばないと suspended のままになる。BEGIN ボタンや任意キー押下時に呼ぶこと。
+ */
+export function warmupAudio(): void {
+  const c = ensureCtx();
+  if (!c) return;
+  if (c.state === 'suspended') {
+    c.resume().catch(() => {});
+  }
 }
 
 function ensureCtx(): AudioContext | null {
