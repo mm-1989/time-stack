@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   VirtualClock,
+  anniversaryMonthFrame,
+  anniversaryYearFrame,
   calendarBreakdown,
+  clampDay,
   elapsedSinceJstMidnight,
   formatJstClock,
 } from './time';
@@ -135,5 +138,101 @@ describe('calendarBreakdown', () => {
     const start = new Date(2026, 4, 5).getTime();
     const bd = calendarBreakdown(start, -1000);
     expect(bd.seconds).toBe(0);
+  });
+});
+
+describe('clampDay', () => {
+  it('Feb は 28 日にクランプ (平年)', () => {
+    expect(clampDay(2026, 1, 31)).toBe(28);
+    expect(clampDay(2026, 1, 29)).toBe(28);
+    expect(clampDay(2026, 1, 28)).toBe(28);
+    expect(clampDay(2026, 1, 15)).toBe(15);
+  });
+  it('Feb は 29 日にクランプ (うるう年 2024)', () => {
+    expect(clampDay(2024, 1, 31)).toBe(29);
+    expect(clampDay(2024, 1, 29)).toBe(29);
+  });
+  it('30 日月で 31 をクランプ', () => {
+    expect(clampDay(2026, 3, 31)).toBe(30); // April
+    expect(clampDay(2026, 5, 31)).toBe(30); // June
+  });
+  it('31 日月はそのまま', () => {
+    expect(clampDay(2026, 0, 31)).toBe(31); // Jan
+    expect(clampDay(2026, 6, 31)).toBe(31); // July
+  });
+});
+
+describe('anniversaryMonthFrame', () => {
+  it('通常月 15 日起点、2 週間後 → filled≈14, count=30', () => {
+    const origin = new Date(1990, 5, 15).getTime();
+    const wall = new Date(2026, 5, 29).getTime(); // 6/15 anchor → 6/29 = 14 日
+    const f = anniversaryMonthFrame(origin, wall);
+    expect(f.count).toBe(30); // 6/15 → 7/15 = 30 日
+    expect(f.filled).toBeCloseTo(14, 1);
+  });
+
+  it('Jan 31 起点、2 月内なら count=28 にクランプ', () => {
+    const origin = new Date(2026, 0, 31).getTime();
+    const wall = new Date(2026, 1, 14).getTime(); // 2/14
+    const f = anniversaryMonthFrame(origin, wall);
+    // anchor は 2026-01-31、次 anchor は clampDay(2026,1,31)=Feb 28 → 28 日
+    expect(f.count).toBe(28);
+    expect(f.filled).toBeCloseTo(14, 0);
+  });
+
+  it('うるう年 Feb 29 起点、平年は Feb 28 にクランプ', () => {
+    const origin = new Date(2024, 1, 29).getTime();
+    const wall = new Date(2025, 1, 27).getTime(); // 平年 2/27
+    const f = anniversaryMonthFrame(origin, wall);
+    // anchor は 2025-01-29、次は Feb 28 にクランプされる → count=30
+    expect(f.count).toBeGreaterThanOrEqual(28);
+    expect(f.filled).toBeGreaterThanOrEqual(0);
+  });
+
+  it('origin == wall で filled=0', () => {
+    const ms = new Date(2026, 4, 5, 12, 0, 0).getTime();
+    const f = anniversaryMonthFrame(ms, ms);
+    expect(f.filled).toBeCloseTo(0, 5);
+  });
+
+  it('Dec 31 起点、Mar 中盤での filled が連続的', () => {
+    const origin = new Date(2026, 11, 31).getTime();
+    const wall = new Date(2027, 2, 15).getTime(); // 3/15
+    const f = anniversaryMonthFrame(origin, wall);
+    // 2027-02-28 (clamp from 2/31) anchor → 3/31 anniversary 直前
+    expect(f.count).toBeGreaterThanOrEqual(28);
+    expect(f.filled).toBeGreaterThan(0);
+    expect(f.filled).toBeLessThan(f.count);
+  });
+});
+
+describe('anniversaryYearFrame', () => {
+  it('count は常に 12', () => {
+    const origin = new Date(1990, 3, 15).getTime();
+    const wall = new Date(2026, 4, 5).getTime();
+    const f = anniversaryYearFrame(origin, wall);
+    expect(f.count).toBe(12);
+  });
+
+  it('1990-04-15 起点、2026-05-05 → filled≈0.67 (4/15 anchor から 20 日経過 ≈ 0.67 月)', () => {
+    const origin = new Date(1990, 3, 15).getTime();
+    const wall = new Date(2026, 4, 5).getTime();
+    const f = anniversaryYearFrame(origin, wall);
+    expect(f.filled).toBeGreaterThan(0.5);
+    expect(f.filled).toBeLessThan(1.0);
+  });
+
+  it('origin == wall で filled=0', () => {
+    const ms = new Date(2026, 4, 5).getTime();
+    const f = anniversaryYearFrame(ms, ms);
+    expect(f.filled).toBeCloseTo(0, 5);
+  });
+
+  it('うるう年 Feb 29 起点 + 平年 Feb 28 で filled が 0..12 内', () => {
+    const origin = new Date(2024, 1, 29).getTime();
+    const wall = new Date(2025, 1, 28).getTime();
+    const f = anniversaryYearFrame(origin, wall);
+    expect(f.filled).toBeGreaterThanOrEqual(0);
+    expect(f.filled).toBeLessThan(12);
   });
 });

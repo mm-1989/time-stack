@@ -3,13 +3,84 @@
 
 import type { TimeGrid } from './grid';
 import { isMuted, setMuted } from './audio';
-import { SCALES, type ScaleId } from './scales';
+import { SCALES, type ResolveContext, type ScaleId } from './scales';
+import { clampDay } from './time';
 import { t } from './i18n';
 
 const MONTHS = [
   'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
   'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
 ] as const;
+
+const pad2Local = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * セル idx に対応する「具体的な calendar 日時範囲」を返す。
+ * NOW/countdown モード (calendar anchored grid) と custom モード (anniversary anchored
+ * for month/year) を内部で分岐する。speed≠1 では sec/min/hour scale の cycle 境界が
+ * ずれるが、tooltip は speed=1 想定の近似で描く (実用上問題なし)。
+ */
+function cellToWallRange(
+  scale: ScaleId,
+  idx: number,
+  wallMs: number,
+  ctx?: ResolveContext,
+): string {
+  const wall = new Date(wallMs);
+  if (scale === 'year') {
+    if (ctx?.originMode === 'custom' && ctx.originMs != null) {
+      // anniversary-anchored: cycle 開始は origin の MM 月。cell idx → 開始月 + idx
+      const origin = new Date(ctx.originMs);
+      const oMo = origin.getMonth();
+      const oDay = origin.getDate();
+      // 直近 yearly anniversary を計算
+      let anchorY = wall.getFullYear();
+      const anchorD = clampDay(anchorY, oMo, oDay);
+      let anchorMs = new Date(anchorY, oMo, anchorD).getTime();
+      if (anchorMs > wallMs) {
+        anchorY -= 1;
+      }
+      const cellMo = (oMo + idx) % 12;
+      const cellY = anchorY + Math.floor((oMo + idx) / 12);
+      return `${cellY} · ${MONTHS[cellMo]}`;
+    }
+    // calendar-anchored: 当年 idx 月
+    return `${wall.getFullYear()} · ${MONTHS[idx]}`;
+  }
+  if (scale === 'month') {
+    if (ctx?.originMode === 'custom' && ctx.originMs != null) {
+      // anniversary-anchored: 直近月命日 + idx 日
+      const origin = new Date(ctx.originMs);
+      const oDay = origin.getDate();
+      let anchorY = wall.getFullYear();
+      let anchorMo = wall.getMonth();
+      let anchorD = clampDay(anchorY, anchorMo, oDay);
+      let anchorMs = new Date(anchorY, anchorMo, anchorD).getTime();
+      if (anchorMs > wallMs) {
+        anchorMo -= 1;
+        if (anchorMo < 0) { anchorMo = 11; anchorY -= 1; }
+        anchorD = clampDay(anchorY, anchorMo, oDay);
+        anchorMs = new Date(anchorY, anchorMo, anchorD).getTime();
+      }
+      const cellDate = new Date(anchorMs);
+      cellDate.setDate(cellDate.getDate() + idx);
+      return `${cellDate.getFullYear()}/${pad2Local(cellDate.getMonth() + 1)}/${pad2Local(cellDate.getDate())}`;
+    }
+    // calendar-anchored: 当月 (idx+1) 日
+    return `${wall.getFullYear()}/${pad2Local(wall.getMonth() + 1)}/${pad2Local(idx + 1)}`;
+  }
+  if (scale === 'day') {
+    // cells = 当日の hours。idx 時 (24h 表記)
+    return `${pad2Local(idx)}:00 — ${pad2Local(idx)}:59:59`;
+  }
+  if (scale === 'hour') {
+    // cells = 当時間内の minutes。HH:idx:00 - HH:idx:59 (HH = 壁時計現在時間)
+    const hh = pad2Local(wall.getHours());
+    return `${hh}:${pad2Local(idx)}:00 — ${hh}:${pad2Local(idx)}:59`;
+  }
+  // minute scale: cells = 当分内の seconds。HH:MM:idx (HH:MM = 壁時計現在時分)
+  return `${pad2Local(wall.getHours())}:${pad2Local(wall.getMinutes())}:${pad2Local(idx)}`;
+}
 
 /** 右下のサウンド ON/OFF インジケータ DOM。クリックで toggle。 */
 export function setupSoundIndicator(): { refresh: () => void } {
@@ -32,17 +103,20 @@ export function setupSoundIndicator(): { refresh: () => void } {
   return { refresh };
 }
 
-/** マスホバーで時刻範囲ツールチップ。getCurrentScale で現スケールを取得。 */
+/**
+ * マスホバーで時刻範囲ツールチップ。getCurrentScale で現スケールを取得。
+ * 全 scale で wall-clock anchored の表示に統一。custom origin 時、month/year は
+ * anniversary 起点の日付に切り替え (grid と同じ anchor を維持)。
+ */
 export function setupHoverTooltip(
   canvas: HTMLCanvasElement,
   grid: TimeGrid,
   getCurrentScale: () => ScaleId,
-  getVirtualMs: () => number,
+  getCtx: () => ResolveContext | undefined,
 ): void {
   const tooltip = document.createElement('div');
   tooltip.className = 'cell-tooltip';
   document.body.appendChild(tooltip);
-  const pad2 = (n: number) => String(n).padStart(2, '0');
 
   canvas.addEventListener('pointermove', (e) => {
     const idx = grid.hitTest(e.clientX, e.clientY);
@@ -52,30 +126,8 @@ export function setupHoverTooltip(
     }
     const scale = getCurrentScale();
     const unit = SCALES[scale].unit;
-    const totalSec = Math.floor(getVirtualMs() / 1000);
-    const hour = Math.floor(totalSec / 3600) % 24;
-    const min = Math.floor(totalSec / 60) % 60;
-    const wallNow = new Date();
-    let timeRange: string;
-    if (scale === 'year') {
-      // idx 0..11 = 1月..12月。当該月の開始月-終了月を表示
-      const monthName = MONTHS[idx] ?? `M${idx + 1}`;
-      timeRange = `${wallNow.getFullYear()} · ${monthName}`;
-    } else if (scale === 'month') {
-      // idx は当月 N 日目 (0-indexed)。日付の壁時計表示
-      const yyyy = wallNow.getFullYear();
-      const mm = pad2(wallNow.getMonth() + 1);
-      const dd = pad2(idx + 1);
-      timeRange = `${yyyy}/${mm}/${dd}`;
-    } else if (scale === 'day') {
-      timeRange = `${pad2(idx)}:00 — ${pad2(idx)}:59:59`;
-    } else if (scale === 'hour') {
-      timeRange = `${pad2(hour)}:${pad2(idx)}:00 — ${pad2(hour)}:${pad2(idx)}:59`;
-    } else {
-      timeRange = `${pad2(hour)}:${pad2(min)}:${pad2(idx)}`;
-    }
-    // cell 番号は 1-indexed で表示 (1s..60s / 1m..60m / 1h..24h / 1d..31d / 1M..12M)。
-    // 内部の idx は 0-indexed のままで、表示時のみ +1 する。
+    const timeRange = cellToWallRange(scale, idx, Date.now(), getCtx());
+    // cell 番号は 1-indexed で表示 (1s..60s / 1m..60m / 1h..24h / 1d..31d / 1M..12M)
     tooltip.textContent = `${idx + 1}${unit}  ·  ${timeRange}`;
     tooltip.style.left = `${e.clientX + 14}px`;
     tooltip.style.top = `${e.clientY + 14}px`;

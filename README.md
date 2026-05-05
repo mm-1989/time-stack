@@ -22,6 +22,30 @@
 
 month / year は壁時計暦にアンカーされ、月跨ぎでマス数が動的に変わる(うるう年判定込み)。
 
+## 起点モードと anchor 切替
+
+origin (起点) のモードによって、month / year スケールの「サイクル境界」が自動で切り替わります。ユーザは何も設定せず `?since=` を付けるだけで HUD と grid の数値が一致します。
+
+| モード | 起動方法 | sec/min/hour/day | month / year | HUD 経過 |
+|---|---|---|---|---|
+| **NOW** | デフォルト or 起動画面 NOW 選択 | virtualMs modulo (= 当日) | **壁時計暦** (今日は 5/5、今は May) | 当日経過 (Hh Mm Ss) |
+| **CUSTOM** | `?since=YYYY-MM-DD` | virtualMs modulo (anniversary 起点) | **anniversary 起点** (月命日サイクル / 年命日サイクル) | 起点累積 (Ny Nmo Nd HH:MM:SS) |
+| **COUNTDOWN** | `?until=YYYY-MM-DD` | virtualMs modulo | 壁時計暦 (NOW と同じ) | セッション経過 + 残時間 |
+
+### 例: `?since=1990-04-15` の場合
+
+- HUD: `36y 0mo 20d HH:MM:SS` (起点累積、calendar 差分)
+- 月スケール grid: 直近月命日 (4/15) からの経過日 = 20 日 fill (HUD と一致)
+- 年スケール grid: 直近年命日 (1990 → 2026 → 4/15) からの経過月 (HUD と一致)
+- 月命日が無い月 (Jan 31 起点 → 2 月の 31 日) は **月末日にクランプ** (Feb 28 / 29 / Apr 30 等)
+- うるう年 2/29 起点 → 平年は 2/28 にクランプ
+
+### 例: NOW モード
+
+- HUD: `HH:MM:SS` (日数省略)
+- 月スケール grid: 今日 = 当月の N 日目 (壁時計)
+- 年スケール grid: 今月 = 当年の M 月 (壁時計)
+
 ## 主要な操作
 
 | キー / 操作 | 動作 |

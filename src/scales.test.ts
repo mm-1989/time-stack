@@ -145,3 +145,58 @@ describe('snapshotScale (resolve なしのスケール)', () => {
     expect(snap.filled).toBe(30);
   });
 });
+
+describe('snapshotScale (ctx による mode 分岐)', () => {
+  // 共通: 1990-04-15 起点、2026-05-05 を wallMs に
+  const customCtx = {
+    originMs: new Date(1990, 3, 15).getTime(),
+    originMode: 'custom' as const,
+  };
+  const wallMs = new Date(2026, 4, 5, 12, 0, 0).getTime();
+
+  it('ctx 省略 → calendar (現状互換) で month は当月の日数', () => {
+    const snap = snapshotScale(SCALES.month, 0, wallMs);
+    // 2026-05 は 31 日
+    expect(snap.count).toBe(31);
+    // 5/5 12:00 → filled = 4 + 0.5 = 4.5
+    expect(snap.filled).toBeCloseTo(4.5, 1);
+  });
+
+  it('originMode=now → calendar (互換)', () => {
+    const snap = snapshotScale(SCALES.month, 0, wallMs, {
+      originMs: wallMs - 12 * 3600_000,
+      originMode: 'now',
+    });
+    expect(snap.count).toBe(31);
+    expect(snap.filled).toBeCloseTo(4.5, 1);
+  });
+
+  it('originMode=custom → anniversary (4/15 anchor から 20 日)', () => {
+    const snap = snapshotScale(SCALES.month, 0, wallMs, customCtx);
+    expect(snap.count).toBe(30); // 4/15 → 5/15 = 30 日
+    expect(snap.filled).toBeGreaterThan(19);
+    expect(snap.filled).toBeLessThan(21);
+  });
+
+  it('year scale: ctx 省略 → calendar (5月 = filled≈4.x)', () => {
+    const snap = snapshotScale(SCALES.year, 0, wallMs);
+    expect(snap.count).toBe(12);
+    expect(snap.filled).toBeGreaterThan(4);
+    expect(snap.filled).toBeLessThan(5);
+  });
+
+  it('year scale: originMode=custom → anniversary (4/15 anchor から 20 日 ≈ 0.67 月)', () => {
+    const snap = snapshotScale(SCALES.year, 0, wallMs, customCtx);
+    expect(snap.count).toBe(12);
+    expect(snap.filled).toBeGreaterThan(0.5);
+    expect(snap.filled).toBeLessThan(1.0);
+  });
+
+  it('originMode=countdown → calendar (互換、anniversary は使わない)', () => {
+    const snap = snapshotScale(SCALES.month, 0, wallMs, {
+      ...customCtx,
+      originMode: 'countdown',
+    });
+    expect(snap.count).toBe(31);
+  });
+});

@@ -2,7 +2,13 @@ import './style.css';
 import { VirtualClock, elapsedSinceJstMidnight, formatJstClock } from './time';
 import { TimeGrid } from './grid';
 import { Hud } from './hud';
-import { SCALES, filledFor, snapshotScale, type ScaleId } from './scales';
+import {
+  SCALES,
+  filledFor,
+  snapshotScale,
+  type ResolveContext,
+  type ScaleId,
+} from './scales';
 import { ScaleSwitch } from './scaleSwitch';
 import { makePromotion } from './promotion';
 import {
@@ -78,7 +84,9 @@ function initApp(): void {
     year: null,
   };
 
-  // grid 初期化用に現フレーム snapshot を取得 (count が暦由来で動的なため)
+  // grid 初期化用に現フレーム snapshot を取得 (count が暦由来で動的なため)。
+  // この時点では activeOrigin が未確定なので ctx は省略 (= calendar 計算)。
+  // bootstrap 後の最初の tick で正しい anchor に lazy-update される。
   const initSnapshot = snapshotScale(SCALES[currentScaleId], 0, Date.now());
   const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId, initSnapshot.count));
   grid.setAnimSlow(animSlow);
@@ -106,10 +114,23 @@ function initApp(): void {
 
   function changeScale(newId: ScaleId): void {
     currentScaleId = newId;
-    const snap = snapshotScale(SCALES[newId], lastVirtualMs, Date.now());
+    const snap = snapshotScale(SCALES[newId], lastVirtualMs, Date.now(), buildCtx());
     lastSnapshotCount = snap.count;
     grid.transitionTo(scaleToGridOpts(newId, snap.count), performance.now());
     prevCycleBucket = -1;
+  }
+
+  /**
+   * 現在の activeOrigin から ResolveContext を組み立てる。
+   * custom origin のときに anniversary 起点計算が有効化される。
+   * activeOrigin 未確定 (bootstrap 中) は undefined を返す。
+   */
+  function buildCtx(): ResolveContext | undefined {
+    if (!activeOrigin) return undefined;
+    const originMs = activeOrigin.mode === 'custom' || activeOrigin.mode === 'countdown'
+      ? activeOrigin.date.getTime()
+      : Date.now() - elapsedSinceJstMidnight(Date.now());
+    return { originMs, originMode: activeOrigin.mode };
   }
 
   function fitCanvas(): void {
@@ -151,7 +172,7 @@ function initApp(): void {
 
   // ===== 6. 周辺 widgets (sound / tooltip / parallax) =====
   const soundIndicator = setupSoundIndicator();
-  setupHoverTooltip(canvas, grid, () => currentScaleId, () => lastVirtualMs);
+  setupHoverTooltip(canvas, grid, () => currentScaleId, () => buildCtx());
   setupMouseParallax(canvas);
 
   // タッチデバイスの横スワイプで前後スケール切替
@@ -303,7 +324,8 @@ function initApp(): void {
       }
     }
     const wallMs = Date.now();
-    const snap = snapshotScale(SCALES[currentScaleId], virtualMs, wallMs);
+    const ctx = buildCtx();
+    const snap = snapshotScale(SCALES[currentScaleId], virtualMs, wallMs, ctx);
     // 月跨ぎ等で count が変わったら grid を再構成 (transitionTo でアニメ)
     if (snap.count !== lastSnapshotCount) {
       lastSnapshotCount = snap.count;
@@ -314,13 +336,15 @@ function initApp(): void {
     checkCellComplete(snap.filled);
     // 進捗バー: 各スケールの「自分内での進捗 0..1」を渡す。
     // resolve() があるスケールは snapshot ベース、ないものは modulo 計算。
+    // month/year は ctx 経由で custom origin 時 anniversary 起点に切り替わる。
+    const monthSnap = snapshotScale(SCALES.month, virtualMs, wallMs, ctx);
+    const yearSnap = snapshotScale(SCALES.year, virtualMs, wallMs, ctx);
     scaleSwitch.updateProgress({
       minute: filledFor(SCALES.minute, virtualMs) / SCALES.minute.count,
       hour: filledFor(SCALES.hour, virtualMs) / SCALES.hour.count,
       day: filledFor(SCALES.day, virtualMs) / SCALES.day.count,
-      month: snapshotScale(SCALES.month, virtualMs, wallMs).filled /
-        snapshotScale(SCALES.month, virtualMs, wallMs).count,
-      year: snapshotScale(SCALES.year, virtualMs, wallMs).filled / 12,
+      month: monthSnap.filled / monthSnap.count,
+      year: yearSnap.filled / 12,
     });
     const renderStart = perfRecord ? performance.now() : 0;
     grid.render(now);

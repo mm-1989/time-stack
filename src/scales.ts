@@ -1,6 +1,12 @@
 // 時間スケールの定義。複数のスケールで「同じグリッド」を異なる単位で見る。
-// minute/hour/day は単純循環 (固定 count + msPerCell)、month/year は壁時計暦に
-// アンカーするため resolve() 経由で動的に count + filled を返す。
+// minute/hour/day は単純循環 (固定 count + msPerCell)、month/year は origin.mode に
+// 応じて wall-clock anchored (NOW/countdown) か elapsed anchored (custom = anniversary 起点)
+// を切り替えて resolve() で count + filled を返す。
+
+import {
+  anniversaryMonthFrame,
+  anniversaryYearFrame,
+} from './time';
 
 export type ScaleId = 'minute' | 'hour' | 'day' | 'month' | 'year';
 
@@ -10,6 +16,20 @@ export interface ScaleSnapshot {
   count: number;
   /** 0 〜 count の塗り目盛 (小数あり)。下位粒度の補間も内包 */
   filled: number;
+}
+
+/**
+ * resolve() 呼び出し時の文脈。origin が custom モードかどうかで月/年の anchor が
+ * 変わる (custom → anniversary 起点 / それ以外 → 壁時計暦)。
+ *
+ * 省略時 (= ctx 自体が undefined) は origin 不明として calendar 計算にフォールバック。
+ * 既存テスト (ctx 省略) の挙動を保つため optional。
+ */
+export interface ResolveContext {
+  /** origin 日時の UTC ms。anniversary 計算の起点。 */
+  originMs?: number;
+  /** origin のモード。'custom' のときのみ anniversary 計算が走る。 */
+  originMode?: 'now' | 'custom' | 'countdown';
 }
 
 export interface Scale {
@@ -34,8 +54,13 @@ export interface Scale {
    * 暦アンカー型のスケール (month/year) はここで現フレームの count + filled を返す。
    * `wallClockMs` は壁時計の現在 (Date.now()) を渡す。virtualMs は加速モード等の
    * 仮想経過時間 (主に minute/hour/day で使う)。
+   * `ctx` は origin 情報。custom origin のときは anniversary 起点で計算する。
    */
-  resolve?(virtualMs: number, wallClockMs: number): ScaleSnapshot;
+  resolve?(
+    virtualMs: number,
+    wallClockMs: number,
+    ctx?: ResolveContext,
+  ): ScaleSnapshot;
 }
 
 // shortLabel は「マス 1 つの単位」を直接表す: minute scale なら 1 マス=1 sec なので 'sec'。
@@ -84,7 +109,12 @@ export const SCALES: Record<ScaleId, Scale> = {
     fillColor: '#ff3a5e', // red-magenta
     subdivisions: 24, // 1 日マス内に 24 時粒子
     unit: 'd',
-    resolve(_virtualMs, wallClockMs) {
+    resolve(_virtualMs, wallClockMs, ctx) {
+      // custom origin → anniversary 起点で count + filled を計算
+      if (ctx?.originMode === 'custom' && ctx.originMs != null) {
+        return anniversaryMonthFrame(ctx.originMs, wallClockMs);
+      }
+      // それ以外 (now / countdown / ctx 省略) → 暦アンカー (現状互換)
       const date = new Date(wallClockMs);
       // new Date(y, m+1, 0) の date 部 = 当月末日 = 当月日数
       const daysInMonth = new Date(
@@ -113,7 +143,12 @@ export const SCALES: Record<ScaleId, Scale> = {
     fillColor: '#c93cff', // violet
     subdivisions: 30, // 1 月マス内に ~30 日粒子
     unit: 'M',
-    resolve(_virtualMs, wallClockMs) {
+    resolve(_virtualMs, wallClockMs, ctx) {
+      // custom origin → anniversary 起点 (yearly anniversary 月単位)
+      if (ctx?.originMode === 'custom' && ctx.originMs != null) {
+        return anniversaryYearFrame(ctx.originMs, wallClockMs);
+      }
+      // それ以外 → 暦アンカー (1月1日起点、現状互換)
       const date = new Date(wallClockMs);
       const month = date.getMonth(); // 0..11
       const daysInMonth = new Date(
@@ -163,13 +198,16 @@ export function nextUnlockedScale(
 /**
  * virtualMs / wallClockMs から現フレームの (count, filled) を返す統一エントリ。
  * resolve() を持つスケールはそれを呼び、ない場合は静的 count + 単純 modulo で算出。
+ * `ctx` は origin 情報。resolve() に forward され、custom origin 時に anniversary
+ * 起点計算を有効化する。ctx 省略時は calendar 計算 (回帰互換)。
  */
 export function snapshotScale(
   scale: Scale,
   virtualMs: number,
   wallClockMs: number,
+  ctx?: ResolveContext,
 ): ScaleSnapshot {
-  if (scale.resolve) return scale.resolve(virtualMs, wallClockMs);
+  if (scale.resolve) return scale.resolve(virtualMs, wallClockMs, ctx);
   return { count: scale.count, filled: filledFor(scale, virtualMs) };
 }
 
