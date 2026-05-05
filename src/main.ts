@@ -4,7 +4,6 @@ import { TimeGrid } from './grid';
 import { Hud } from './hud';
 import { SCALES, filledFor, snapshotScale, type ScaleId } from './scales';
 import { ScaleSwitch } from './scaleSwitch';
-import { MiniGrid } from './miniGrid';
 import { makePromotion } from './promotion';
 import {
   playTick, playChime, playPromote, setMuted, isMuted, warmupAudio,
@@ -86,10 +85,8 @@ function initApp(): void {
   /** 直近フレームの count。月跨ぎ等で count が変わったら grid.transitionTo で再構成 */
   let lastSnapshotCount = initSnapshot.count;
   const hud = new Hud(document.body, { devMode });
-  const miniGrid = new MiniGrid(document.body);
   const scaleSwitch = new ScaleSwitch(document.body, currentScaleId, changeScale);
   const summary = createSummary(document.body);
-  syncMiniScale();
 
   // ===== 5. ヘルパー =====
   function scaleToGridOpts(id: ScaleId, countOverride?: number) {
@@ -113,17 +110,6 @@ function initApp(): void {
     lastSnapshotCount = snap.count;
     grid.transitionTo(scaleToGridOpts(newId, snap.count), performance.now());
     prevCycleBucket = -1;
-    syncMiniScale();
-  }
-
-  function syncMiniScale(): void {
-    const upperId = PROMOTE_TARGET[currentScaleId];
-    if (!upperId) {
-      miniGrid.setScale(null);
-      return;
-    }
-    const upSnap = snapshotScale(SCALES[upperId], lastVirtualMs, Date.now());
-    miniGrid.setScale(upperId, upSnap.count);
   }
 
   function fitCanvas(): void {
@@ -336,14 +322,6 @@ function initApp(): void {
         snapshotScale(SCALES.month, virtualMs, wallMs).count,
       year: snapshotScale(SCALES.year, virtualMs, wallMs).filled / 12,
     });
-    const upperId = PROMOTE_TARGET[currentScaleId];
-    if (upperId) {
-      const upSnap = snapshotScale(SCALES[upperId], virtualMs, wallMs);
-      // miniGrid の count は同 setScale でべき等更新 (内部 early return)。
-      // 月跨ぎでの count 変化も拾う。
-      miniGrid.setScale(upperId, upSnap.count);
-      miniGrid.setFilled(upSnap.filled);
-    }
     const renderStart = perfRecord ? performance.now() : 0;
     grid.render(now);
     if (perfRecord) perfRecord(performance.now() - renderStart);
@@ -399,7 +377,6 @@ function initApp(): void {
     if (progressiveUnlock && currentScaleId !== 'minute') {
       currentScaleId = 'minute';
       grid.transitionTo(scaleToGridOpts('minute'), performance.now());
-      syncMiniScale();
     }
 
     const initEl = document.getElementById('init-overlay');

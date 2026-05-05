@@ -1071,66 +1071,6 @@ body::after {
   letter-spacing: 0.08em;
 }
 
-/* ---------- ミニチュア上位ビュー ---------- */
-.mini-grid {
-  position: fixed;
-  top: 80px;
-  right: 28px;
-  padding: 8px 10px 9px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border: 1px solid var(--tron-line);
-  border-radius: 2px;
-  z-index: 9;
-  user-select: none;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 0.6s ease 0.6s, transform 0.6s ease 0.6s;
-}
-body:not(.hud-loading) .mini-grid:not(.hidden) {
-  opacity: 1;
-  transform: translateY(0);
-}
-.mini-grid.hidden {
-  display: none;
-}
-.mini-grid-label {
-  font: 500 9px/1 'JetBrains Mono', ui-monospace, monospace;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--tron-text-dim);
-  margin-bottom: 6px;
-  text-align: right;
-}
-.mini-grid-cells {
-  display: grid;
-  grid-template-columns: repeat(var(--cols, 12), 1fr);
-  gap: 2px;
-}
-.mini-cell {
-  width: 6px;
-  height: 4px;
-  background: var(--mini-color, #00f5ff);
-  border-radius: 0;
-  transition: opacity 0.2s ease;
-}
-.mini-cell-current {
-  box-shadow: 0 0 6px var(--mini-color, #00f5ff);
-}
-@media (max-width: 640px) {
-  .mini-grid {
-    top: 80px;
-    right: 14px;
-    padding: 6px 8px 7px;
-  }
-  .mini-cell {
-    width: 4px;
-    height: 3px;
-  }
-}
-
 /* ---------- マスホバーツールチップ ---------- */
 .cell-tooltip {
   position: fixed;
