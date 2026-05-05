@@ -716,6 +716,15 @@ export class TimeGrid {
     const subFilled = fracFilled * subs;
     const subInt = Math.floor(subFilled);
 
+    // 「最新の値」 = 進行中サブ粒子 (i === subInt) の kira flash 用パラメータ。
+    // 1.6 秒周期で 200ms のフラッシュ (sin で 0 → 1 → 0 山型)。
+    const FLASH_PERIOD_MS = 1600;
+    const FLASH_DUR_MS = 200;
+    const flashPhase = now % FLASH_PERIOD_MS;
+    const flash = flashPhase < FLASH_DUR_MS
+      ? Math.sin((flashPhase / FLASH_DUR_MS) * Math.PI)
+      : 0;
+
     for (let i = 0; i < subs; i++) {
       const r = Math.floor(i / subCols);
       const c = i % subCols;
@@ -723,30 +732,38 @@ export class TimeGrid {
       const cy = innerY + r * (cellH + cellGap) + cellH / 2;
 
       if (i < subInt) {
-        // 点灯済み
+        // 点灯済み: solid 四角
         ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(cx, cy, dotR, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(cx - dotR, cy - dotR, dotR * 2, dotR * 2);
       } else if (i === subInt) {
-        // 進行中サブ粒子: 全体を白で塗る (=「先頭」の明示) + 周囲に色 glow
+        // 進行中サブ粒子 (= 最新の値の位置): 白い四角 + pulse + 周期 kira flash。
+        // 「いま測定中」の場所が周辺視野でもキラリと目に入るように。
         const pulse = 0.5 + 0.5 * Math.sin(now * 0.012);
         const sz = dotR * (1.15 + pulse * 0.5);
         ctx.save();
         ctx.shadowColor = color;
-        ctx.shadowBlur = (10 + pulse * 12) * this.dpr;
+        ctx.shadowBlur = (10 + pulse * 12 + flash * 22) * this.dpr;
         ctx.fillStyle = `rgba(255, 255, 255, ${0.85 + pulse * 0.15})`;
-        ctx.beginPath();
-        ctx.arc(cx, cy, sz, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(cx - sz, cy - sz, sz * 2, sz * 2);
+        // Flash 中だけ cross rays (4 方向の線) を出してキラっと光らせる
+        if (flash > 0.1) {
+          ctx.strokeStyle = `rgba(255, 255, 255, ${flash * 0.85})`;
+          ctx.lineWidth = 1 * this.dpr;
+          const rayLen = sz * (2.4 + flash * 0.8);
+          ctx.beginPath();
+          ctx.moveTo(cx - rayLen, cy);
+          ctx.lineTo(cx + rayLen, cy);
+          ctx.moveTo(cx, cy - rayLen);
+          ctx.lineTo(cx, cy + rayLen);
+          ctx.stroke();
+        }
         ctx.restore();
       } else {
-        // 未点灯
+        // 未点灯: stroked 四角
         ctx.strokeStyle = 'rgba(255,255,255,0.10)';
         ctx.lineWidth = 0.8 * this.dpr;
-        ctx.beginPath();
-        ctx.arc(cx, cy, dotR * 0.85, 0, Math.PI * 2);
-        ctx.stroke();
+        const sz = dotR * 0.85;
+        ctx.strokeRect(cx - sz, cy - sz, sz * 2, sz * 2);
       }
     }
   }
