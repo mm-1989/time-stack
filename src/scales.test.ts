@@ -313,6 +313,19 @@ describe('findCountdownNaturalScale', () => {
     expect(findCountdownNaturalScale(0)).toBe(null);
     expect(findCountdownNaturalScale(-1000)).toBe(null);
   });
+  // count < MIN_CELLS (=5) は無効
+  it('31 日 (year count=1 で MIN 未満) → null', () => {
+    expect(findCountdownNaturalScale(31 * 86_400_000)).toBe(null);
+  });
+  it('100 日 (year count=3 で MIN 未満) → null', () => {
+    expect(findCountdownNaturalScale(100 * 86_400_000)).toBe(null);
+  });
+  it('6 ヶ月 (year count=6 で MIN 以上) → year', () => {
+    expect(findCountdownNaturalScale(180 * 86_400_000)).toBe('year');
+  });
+  it('100 秒 (hour count=1 で MIN 未満) → null', () => {
+    expect(findCountdownNaturalScale(100 * 1000)).toBe(null);
+  });
 });
 
 describe('lockedCountdownScales', () => {

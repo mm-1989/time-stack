@@ -48,12 +48,22 @@ export interface ResolveContext {
 
 /**
  * countdown total から natural scale を決定する純関数。
- * 「period >= total」を満たす最小 scale を返す。total > 1 年なら null (= natural なし)。
+ * 「period >= total」を満たす最小 scale を返す (= 全期間が 1 サイクルにハマる粒度)。
+ *
+ *  - count = floor(total/msPerCell) が 5 未満になる scale は natural として採用しない。
+ *    例: 31 日 countdown → year scale が period >= total を満たすが count=1 で
+ *    可視化として無意味なので natural なし、全 scale per-cycle にフォールバック。
+ *  - total > 1 年 (どの scale も period < total) → null (natural なし)。
  */
 export function findCountdownNaturalScale(totalMs: number): ScaleId | null {
   if (totalMs <= 0) return null;
+  const MIN_CELLS = 5;
   for (const id of SCALE_ORDER) {
-    if (SCALES[id].periodMs >= totalMs) return id;
+    const s = SCALES[id];
+    if (s.periodMs >= totalMs) {
+      const count = Math.floor(totalMs / s.msPerCell);
+      return count >= MIN_CELLS ? id : null;
+    }
   }
   return null;
 }

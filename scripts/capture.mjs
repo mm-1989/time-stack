@@ -47,7 +47,34 @@ const SCENARIOS = [
   { name: '10-countdown-idle', query: 'until=2030-01-01&unlock=all&scale=hour', wait: 1500 },
   { name: '11-countdown-mid', query: 'until=2030-01-01&speed=10800&unlock=all&scale=hour', wait: 4000 },
   { name: '12-countdown-mobile', query: 'until=2030-01-01&unlock=all&scale=hour', wait: 1500, viewport: { width: 375, height: 812 } },
+  // B+C 設計の natural scale 検証用。短い countdown では natural scale が確定し、
+  // それより大きい scale が selector で lock される。
+  // until 日付はキャプチャ日 + N で動的生成 (キャプチャタイミングに依存しない)。
+  // 13 = 30 日後 countdown (natural=month、year のみ lock。month scale = 30 cells)
+  // 14 = 5 時間後 countdown (natural=day、month/year lock。day scale = 5 cells)
+  { name: '13-countdown-30d-month', query: `until=${dateOffsetIsoDate(30)}&unlock=all&scale=month`, wait: 1500 },
+  { name: '14-countdown-5h-day', query: `until=${dateOffsetIsoTime(5 * 3600)}&unlock=all&scale=day`, wait: 1500 },
 ];
+
+/** N 日後の YYYY-MM-DD を返す (UTC ベース、URL パーサに渡す形) */
+function dateOffsetIsoDate(daysAhead) {
+  const d = new Date(Date.now() + daysAhead * 86_400_000);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** N 秒後の YYYY-MM-DDTHH:MM を返す */
+function dateOffsetIsoTime(secAhead) {
+  const d = new Date(Date.now() + secAhead * 1000);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mn = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}T${hh}:${mn}`;
+}
 
 function buildUrl(query) {
   // cache buster を必ず付ける (CDN 越しで古いキャッシュを踏まないため)
