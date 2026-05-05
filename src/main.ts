@@ -109,6 +109,9 @@ function initApp(): void {
       fillColor: s.fillColor,
       subdivisions: s.subdivisions,
       unit: s.unit,
+      // countdown mode: cell / sub-particle 配置を縦反転 (sand timer 化)。
+      // session 中変化しないが、scale 切替・transitionTo 経由で常に opts に乗せる。
+      countdownMode: activeOrigin?.mode === 'countdown',
     };
   }
 

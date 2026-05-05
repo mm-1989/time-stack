@@ -17,6 +17,12 @@ export interface GridOptions {
   subdivisions?: number;
   /** 進行中マス下に添える単位ラベル ('h' / 'm' / 's')。例: 1 day モードで 14 番目進行中なら "14h" */
   unit?: string;
+  /**
+   * countdown (sand timer) モード。true のときセル配置を縦反転して
+   * 「下から上に時間が逆行する」見た目に。filled の意味は「残マス数」。
+   * 同様に sub-particles も縦反転して、最新粒子 (kira flash) が上端に出る。
+   */
+  countdownMode?: boolean;
 }
 
 type Mode = 'idle' | 'out' | 'in' | 'collapse';
@@ -443,9 +449,14 @@ export class TimeGrid {
     // が描画できるよう this.currentMarkerPos に格納。
     this.currentMarkerPos = null;
 
+    const isCountdown = opts.countdownMode === true;
     for (let i = 0; i < N; i++) {
-      const r = Math.floor(i / cols);
-      const c = i % cols;
+      const rowIdx = Math.floor(i / cols);
+      const colIdx = i % cols;
+      // countdown では縦反転 (= 下から上に時間が逆行)。最終行の左端が cell 0、
+      // 最上行が cell count-1 にマップされる。col 順は維持。
+      const r = isCountdown ? (rows - 1 - rowIdx) : rowIdx;
+      const c = colIdx;
       const x = areaX + c * (cellW + gap);
       const y = areaY + r * (cellH + gap);
       const cellCx = x + cellW / 2;
@@ -617,23 +628,36 @@ export class TimeGrid {
       }
     } else if (isCurrent) {
       const subs = opts.subdivisions ?? 0;
+      const isCountdown = opts.countdownMode === true;
       if (subs > 0) {
         // 下位粒度を粒子で可視化 (進捗ゲージ塗りは省略、粒子の点灯数で進捗を表現)
-        this.drawSubParticles(x, y, w, h, fracFilled, subs, fillColor, now);
+        this.drawSubParticles(x, y, w, h, fracFilled, subs, fillColor, now, isCountdown);
       } else {
-        // 下位粒度なし: 下→上の進捗ゲージで進行を表す (1 分モードなど)
+        // 下位粒度なし: ゲージで進行を表す (sec モード等)。
+        // 累積モードは下→上に伸びる、countdown は上→下 (時間が逆行する見た目)。
         const fillH = h * fracFilled;
-        const fillY = y + h - fillH;
         ctx.save();
         roundRect(ctx, x, y, w, h, r);
         ctx.clip();
-        const g = ctx.createLinearGradient(x, fillY, x, y + h);
-        g.addColorStop(0, alphaCol(fillColor, 0.95));
-        g.addColorStop(1, alphaCol(shade(fillColor, -0.4), 0.85));
-        ctx.fillStyle = g;
-        ctx.fillRect(x, fillY, w, fillH);
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.fillRect(x, fillY - 0.5 * this.dpr, w, 1 * this.dpr);
+        if (isCountdown) {
+          // 上から下へ「沈んでいく」フィル: top edge が leading
+          const g = ctx.createLinearGradient(x, y, x, y + fillH);
+          g.addColorStop(0, alphaCol(shade(fillColor, -0.4), 0.85));
+          g.addColorStop(1, alphaCol(fillColor, 0.95));
+          ctx.fillStyle = g;
+          ctx.fillRect(x, y, w, fillH);
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          ctx.fillRect(x, y + fillH - 0.5 * this.dpr, w, 1 * this.dpr);
+        } else {
+          const fillY = y + h - fillH;
+          const g = ctx.createLinearGradient(x, fillY, x, y + h);
+          g.addColorStop(0, alphaCol(fillColor, 0.95));
+          g.addColorStop(1, alphaCol(shade(fillColor, -0.4), 0.85));
+          ctx.fillStyle = g;
+          ctx.fillRect(x, fillY, w, fillH);
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          ctx.fillRect(x, fillY - 0.5 * this.dpr, w, 1 * this.dpr);
+        }
         ctx.restore();
       }
 
@@ -677,6 +701,7 @@ export class TimeGrid {
   private drawSubParticles(
     x: number, y: number, w: number, h: number,
     fracFilled: number, subs: number, color: string, now: number,
+    isCountdown: boolean,
   ): void {
     const { ctx } = this;
     // 粒子の格子レイアウト: マスのアスペクト比に合わせて cols/rows を選ぶ
@@ -717,8 +742,11 @@ export class TimeGrid {
       : 0;
 
     for (let i = 0; i < subs; i++) {
-      const r = Math.floor(i / subCols);
-      const c = i % subCols;
+      const rowIdx = Math.floor(i / subCols);
+      const colIdx = i % subCols;
+      // countdown では sub-particle も縦反転 (= 下から上に積み上がる、最新粒子が上端)
+      const r = isCountdown ? (subRows - 1 - rowIdx) : rowIdx;
+      const c = colIdx;
       const cx = innerX + c * (cellW + cellGap) + cellW / 2;
       const cy = innerY + r * (cellH + cellGap) + cellH / 2;
 
