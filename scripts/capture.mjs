@@ -41,6 +41,12 @@ const SCENARIOS = [
   // パフォーマンスデバッグ: 重い状態 (animSlow=4) で fps + render 時間を計測。
   // 4 秒間で複数サンプル → console.log の log を解析して fps を確認。
   { name: '09-perf', query: 'scale=hour&debug=perf&since=now&speed=900&unlock=all&animSlow=4', wait: 4000, captureConsole: true },
+  // Countdown sand timer の検証用シーン群。?until= で countdown mode へ。
+  // hour scale で grid が drain 方向 (count→0) に塗られていることを確認。
+  // 10 = 開始直後 (ほぼ満タン)、11 = speed=10800 で 12h drain 後の中盤 (半分埋まる)、12 = mobile。
+  { name: '10-countdown-idle', query: 'until=2030-01-01&unlock=all&scale=hour', wait: 1500 },
+  { name: '11-countdown-mid', query: 'until=2030-01-01&speed=10800&unlock=all&scale=hour', wait: 4000 },
+  { name: '12-countdown-mobile', query: 'until=2030-01-01&unlock=all&scale=hour', wait: 1500, viewport: { width: 375, height: 812 } },
 ];
 
 function buildUrl(query) {
