@@ -390,6 +390,10 @@ function initApp(): void {
     const initialVirtualMs = resetStart ? 0 : initialMsForOrigin(origin, Date.now());
     clock = new VirtualClock(speed, performance.now(), initialVirtualMs);
 
+    // 起動時の grid 初期化は bootstrap 前 (= activeOrigin 未確定) なので countdownMode が
+    // 常に false で作られる。origin 確定後にここで opts を再同期する。
+    grid.setOptions(scaleToGridOpts(currentScaleId, lastSnapshotCount));
+
     const unlockAll = params.get('unlock') === 'all';
     progressiveUnlock = origin.mode === 'now' && !unlockAll;
     scaleSwitch.setUnlocked('minute', true);
