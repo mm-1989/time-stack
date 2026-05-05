@@ -22,6 +22,8 @@ export interface Scale {
   unit: 'h' | 'm' | 's';
 }
 
+// shortLabel は「マス 1 つの単位」を直接表す: minute scale なら 1 マス=1 sec なので 'sec'。
+// label は descriptive (周期 + 内訳) で aria-label / 説明用。
 export const SCALES: Record<ScaleId, Scale> = {
   minute: {
     id: 'minute',
@@ -29,7 +31,7 @@ export const SCALES: Record<ScaleId, Scale> = {
     msPerCell: 1000,
     periodMs: 60_000,
     label: '1 minute · 60 seconds',
-    shortLabel: '1 min',
+    shortLabel: 'sec',
     fillColor: '#00f5ff', // TRON cyan (sharp neon)
     subdivisions: 0, // < 1 秒は人間の認知粒度を超えるので粒子なし
     unit: 's',
@@ -40,7 +42,7 @@ export const SCALES: Record<ScaleId, Scale> = {
     msPerCell: 60_000,
     periodMs: 3_600_000,
     label: '1 hour · 60 minutes',
-    shortLabel: '1 hour',
+    shortLabel: 'min',
     fillColor: '#4ad8ff', // TRON deep cyan
     subdivisions: 60, // 1 分マス内に 60 秒粒子
     unit: 'm',
@@ -51,7 +53,7 @@ export const SCALES: Record<ScaleId, Scale> = {
     msPerCell: 3_600_000,
     periodMs: 86_400_000,
     label: '1 day · 24 hours',
-    shortLabel: '1 day',
+    shortLabel: 'hour',
     fillColor: '#ff7a00', // TRON orange accent (top of hierarchy)
     subdivisions: 60, // 1 時間マス内に 60 分粒子
     unit: 'h',

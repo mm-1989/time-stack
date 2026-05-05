@@ -58,7 +58,9 @@ export function setupHoverTooltip(
     } else {
       timeRange = `${pad2(hour)}:${pad2(min)}:${pad2(idx)}`;
     }
-    tooltip.textContent = `${idx}${unit}  ·  ${timeRange}`;
+    // cell 番号は 1-indexed で表示 (1s..60s / 1m..60m / 1h..24h)。
+    // 内部の idx は 0-indexed のままで、表示時のみ +1 する。
+    tooltip.textContent = `${idx + 1}${unit}  ·  ${timeRange}`;
     tooltip.style.left = `${e.clientX + 14}px`;
     tooltip.style.top = `${e.clientY + 14}px`;
     tooltip.classList.add('show');

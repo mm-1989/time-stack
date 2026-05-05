@@ -92,7 +92,9 @@ function initApp(): void {
     const s = SCALES[id];
     return {
       count: s.count,
-      scaleLabel: s.label,
+      // canvas 大見出しは「1 マスの単位」を端的に表示 ('SEC' / 'MIN' / 'HOUR')。
+      // 詳細な周期説明 (s.label) は aria-label に残し、視覚は短くする。
+      scaleLabel: s.shortLabel,
       fillColor: s.fillColor,
       subdivisions: s.subdivisions,
       unit: s.unit,
