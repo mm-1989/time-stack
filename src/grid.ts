@@ -275,13 +275,9 @@ export class TimeGrid {
     // グリッド占有領域
     const padX = W * 0.08;
     const padTop = H * 0.18;
-    // モバイル幅では下部 scale-switch (CSS bottom:60px、pill 高 ~30px = top 90px from
-    // bottom) と進捗バー (CSS bottom 130px に固定) との位置関係を保つため、padBot を
-    // 「H*0.18 以上 かつ canvas で CSS 145px 以上」とする。短い画面 (iPhone SE 等) で
-    // cells が進捗バーまで降りてくるのを防ぐ。デスクトップは比例値そのまま。
     // モバイル幅では下部 scale-switch (CSS bottom:60px、pill 高 ~30px = top 90px
-     // from bottom) と進行中マスの直下ラベル (boost で 5px 下に伸びる) が干渉しないよう、
-     // padBot に CSS 130px 以上を確保する。デスクトップは比例値そのまま。
+    // from bottom) と進行中マスの直下ラベル (boost で下に伸びる) が干渉しないよう、
+    // padBot に CSS 130px 以上を確保する。デスクトップは比例値そのまま。
     const padBot = window.innerWidth <= 640
       ? Math.max(H * 0.18, 130 * this.dpr)
       : H * 0.18;
@@ -300,9 +296,6 @@ export class TimeGrid {
     } else {
       this.renderGrid(this.opts, this.filled, areaX, areaY, areaW, areaH, now, 'idle');
     }
-
-    // 下部進捗バーは廃止 (冗長 / SUMMARY と badge progress dot で同情報取得可能)。
-    void W; void areaX; void areaW; void padBot;
 
     // 時刻境界エフェクト (一番前面に重ねる)
     this.drawBoundaryEffects(W, H, now);
