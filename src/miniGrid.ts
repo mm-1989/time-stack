@@ -25,24 +25,31 @@ export class MiniGrid {
     this.root.appendChild(this.grid);
   }
 
-  /** 表示する上位スケール (null = 上位なし → 非表示) */
-  setScale(id: ScaleId | null): void {
-    if (this.current === id) return;
-    this.current = id;
-    this.grid.innerHTML = '';
-    this.cells = [];
-    if (!id) {
+  /** 表示する上位スケール (null = 上位なし → 非表示)。
+   *  count は month のように暦由来で変わるスケール用に override できる */
+  setScale(id: ScaleId | null, countOverride?: number): void {
+    if (id === null) {
+      if (this.current === null) return;
+      this.current = null;
+      this.grid.innerHTML = '';
+      this.cells = [];
       this.root.classList.add('hidden');
       return;
     }
-    this.root.classList.remove('hidden');
     const s = SCALES[id];
+    const count = countOverride ?? s.count;
+    // 同じ scale でも count が変わる (月跨ぎ等) なら再構築
+    if (this.current === id && this.cells.length === count) return;
+    this.current = id;
+    this.grid.innerHTML = '';
+    this.cells = [];
+    this.root.classList.remove('hidden');
     this.label.textContent = `↗ ${s.shortLabel}`;
-    // cols: 60 → 12, 24 → 6
-    const cols = s.count === 24 ? 6 : 12;
+    // cols: 28-31 → 7, 24 → 6, 12 → 4, それ以外 → 12
+    const cols = count <= 12 ? 4 : count === 24 ? 6 : count <= 31 ? 7 : 12;
     this.grid.style.setProperty('--cols', String(cols));
     this.grid.style.setProperty('--mini-color', s.fillColor);
-    for (let i = 0; i < s.count; i++) {
+    for (let i = 0; i < count; i++) {
       const cell = document.createElement('div');
       cell.className = 'mini-cell';
       this.grid.appendChild(cell);

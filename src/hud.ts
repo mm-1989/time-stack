@@ -4,6 +4,9 @@
 import { formatJstClock } from './time';
 import { t } from './i18n';
 
+// 曜日 3 文字 (TRON aesthetic: 大文字英)。getDay() の 0=日 に揃える。
+const WEEKDAY = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
+
 export class Hud {
   private wrap: HTMLDivElement;
   private elapsedEl: HTMLDivElement;
@@ -80,8 +83,12 @@ export class Hud {
     const hour = Math.floor(totalSec / 3600) % 24;
     const day = Math.floor(totalSec / 86400);
 
+    // 経過日 ≥ 1 のときのみ "Nd" を出す。1 日未満では時刻部分のみで密度を抑える。
+    const dayPart = day > 0
+      ? `<span class="d">${day}</span><span class="u">d</span> `
+      : '';
     this.elapsedEl.innerHTML =
-      `<span class="d">${day}</span><span class="u">d</span> ` +
+      dayPart +
       `<span class="d">${pad(hour)}</span><span class="sep">:</span>` +
       `<span class="d">${pad(min)}</span><span class="sep">:</span>` +
       `<span class="d">${pad(sec)}</span>`;
@@ -91,10 +98,10 @@ export class Hud {
     const speedTxt = isRealtime ? t('hud.realtime') : `×${speed}`;
     this.subEl.textContent = frozen ? `${speedTxt}  ⏸ FROZEN` : speedTxt;
 
-    // 壁時計 (JST): 加速モードで経過時間と乖離する時のみ表示。
-    // 実時間モードでは経過時間 = JST と等価なので非表示にして冗長を避ける。
-    this.wrap.classList.toggle('hud-realtime', isRealtime);
-    this.jstEl.textContent = `JST  ${formatJstClock(Date.now())}`;
+    // 壁時計 + 曜日 (JST 想定)。常時表示。曜日は month/year ビューで特に意味を持つ。
+    const now = new Date();
+    const wd = WEEKDAY[now.getDay()];
+    this.jstEl.textContent = `${wd}  ${formatJstClock(now.getTime())}`;
   }
 
   /** デバッグ情報を画面左上に表示 (?debug クエリ用) */

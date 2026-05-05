@@ -6,6 +6,11 @@ import { isMuted, setMuted } from './audio';
 import { SCALES, type ScaleId } from './scales';
 import { t } from './i18n';
 
+const MONTHS = [
+  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+] as const;
+
 /** 右下のサウンド ON/OFF インジケータ DOM。クリックで toggle。 */
 export function setupSoundIndicator(): { refresh: () => void } {
   const el = document.createElement('button');
@@ -50,15 +55,26 @@ export function setupHoverTooltip(
     const totalSec = Math.floor(getVirtualMs() / 1000);
     const hour = Math.floor(totalSec / 3600) % 24;
     const min = Math.floor(totalSec / 60) % 60;
+    const wallNow = new Date();
     let timeRange: string;
-    if (scale === 'day') {
+    if (scale === 'year') {
+      // idx 0..11 = 1月..12月。当該月の開始月-終了月を表示
+      const monthName = MONTHS[idx] ?? `M${idx + 1}`;
+      timeRange = `${wallNow.getFullYear()} · ${monthName}`;
+    } else if (scale === 'month') {
+      // idx は当月 N 日目 (0-indexed)。日付の壁時計表示
+      const yyyy = wallNow.getFullYear();
+      const mm = pad2(wallNow.getMonth() + 1);
+      const dd = pad2(idx + 1);
+      timeRange = `${yyyy}/${mm}/${dd}`;
+    } else if (scale === 'day') {
       timeRange = `${pad2(idx)}:00 — ${pad2(idx)}:59:59`;
     } else if (scale === 'hour') {
       timeRange = `${pad2(hour)}:${pad2(idx)}:00 — ${pad2(hour)}:${pad2(idx)}:59`;
     } else {
       timeRange = `${pad2(hour)}:${pad2(min)}:${pad2(idx)}`;
     }
-    // cell 番号は 1-indexed で表示 (1s..60s / 1m..60m / 1h..24h)。
+    // cell 番号は 1-indexed で表示 (1s..60s / 1m..60m / 1h..24h / 1d..31d / 1M..12M)。
     // 内部の idx は 0-indexed のままで、表示時のみ +1 する。
     tooltip.textContent = `${idx + 1}${unit}  ·  ${timeRange}`;
     tooltip.style.left = `${e.clientX + 14}px`;

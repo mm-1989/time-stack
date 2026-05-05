@@ -42,6 +42,8 @@ export class ScaleSwitch {
       if (e.code === 'KeyM') this.set('minute');
       else if (e.code === 'KeyH') this.set('hour');
       else if (e.code === 'KeyD') this.set('day');
+      else if (e.code === 'KeyO') this.set('month'); // mOnth (M は minute と衝突)
+      else if (e.code === 'KeyY') this.set('year');
       else if (e.code === 'BracketLeft') this.cycle(-1);
       else if (e.code === 'BracketRight') this.cycle(1);
     });

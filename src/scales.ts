@@ -1,14 +1,24 @@
-// 時間スケールの定義。3 つのスケールで「同じグリッド」を異なる単位で見る。
+// 時間スケールの定義。複数のスケールで「同じグリッド」を異なる単位で見る。
+// minute/hour/day は単純循環 (固定 count + msPerCell)、month/year は壁時計暦に
+// アンカーするため resolve() 経由で動的に count + filled を返す。
 
-export type ScaleId = 'minute' | 'hour' | 'day';
+export type ScaleId = 'minute' | 'hour' | 'day' | 'month' | 'year';
+
+/** スケールの 1 フレーム分のスナップショット。grid 描画と進捗判定に使う */
+export interface ScaleSnapshot {
+  /** 描画するマス数。month のように月長で変わるものは毎フレーム最新値を返す */
+  count: number;
+  /** 0 〜 count の塗り目盛 (小数あり)。下位粒度の補間も内包 */
+  filled: number;
+}
 
 export interface Scale {
   id: ScaleId;
-  /** 表示マス数 */
+  /** 描画マス数の既定値。resolve() があるスケールでは ignore される */
   count: number;
-  /** 1 マス分の実時間 (ms) */
+  /** 1 マス分の実時間 (ms)。resolve() があるスケールでは参考値 */
   msPerCell: number;
-  /** 周期全体の長さ (ms) = count × msPerCell */
+  /** 周期全体の長さ (ms) = count × msPerCell。同上 */
   periodMs: number;
   /** 上部に出すラベル */
   label: string;
@@ -19,7 +29,13 @@ export interface Scale {
   /** 1 マス内に描く下位粒子の数 (0 で粒子なし)。進行中マスでのみ可視化 */
   subdivisions: number;
   /** 各マスが表す単位 (進行中マス下のラベル用) */
-  unit: 'h' | 'm' | 's';
+  unit: 'h' | 'm' | 's' | 'd' | 'M';
+  /**
+   * 暦アンカー型のスケール (month/year) はここで現フレームの count + filled を返す。
+   * `wallClockMs` は壁時計の現在 (Date.now()) を渡す。virtualMs は加速モード等の
+   * 仮想経過時間 (主に minute/hour/day で使う)。
+   */
+  resolve?(virtualMs: number, wallClockMs: number): ScaleSnapshot;
 }
 
 // shortLabel は「マス 1 つの単位」を直接表す: minute scale なら 1 マス=1 sec なので 'sec'。
@@ -54,13 +70,71 @@ export const SCALES: Record<ScaleId, Scale> = {
     periodMs: 86_400_000,
     label: '1 day · 24 hours',
     shortLabel: 'hour',
-    fillColor: '#ff7a00', // TRON orange accent (top of hierarchy)
+    fillColor: '#ff7a00', // TRON orange accent
     subdivisions: 60, // 1 時間マス内に 60 分粒子
     unit: 'h',
   },
+  month: {
+    id: 'month',
+    count: 30, // resolve() で 28-31 に上書きされる
+    msPerCell: 86_400_000,
+    periodMs: 30 * 86_400_000,
+    label: '1 month · days of current month',
+    shortLabel: 'day',
+    fillColor: '#ff3a5e', // red-magenta
+    subdivisions: 24, // 1 日マス内に 24 時粒子
+    unit: 'd',
+    resolve(_virtualMs, wallClockMs) {
+      const date = new Date(wallClockMs);
+      // new Date(y, m+1, 0) の date 部 = 当月末日 = 当月日数
+      const daysInMonth = new Date(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        0,
+      ).getDate();
+      const dayOfMonth = date.getDate(); // 1..N
+      const fracDay =
+        (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds() +
+          date.getMilliseconds() / 1000) /
+        86400;
+      return {
+        count: daysInMonth,
+        filled: dayOfMonth - 1 + fracDay,
+      };
+    },
+  },
+  year: {
+    id: 'year',
+    count: 12,
+    msPerCell: 30 * 86_400_000,
+    periodMs: 365 * 86_400_000,
+    label: '1 year · 12 months',
+    shortLabel: 'month',
+    fillColor: '#c93cff', // violet
+    subdivisions: 30, // 1 月マス内に ~30 日粒子
+    unit: 'M',
+    resolve(_virtualMs, wallClockMs) {
+      const date = new Date(wallClockMs);
+      const month = date.getMonth(); // 0..11
+      const daysInMonth = new Date(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        0,
+      ).getDate();
+      const dayOfMonth = date.getDate();
+      const fracDay =
+        (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()) /
+        86400;
+      const fracMonth = (dayOfMonth - 1 + fracDay) / daysInMonth;
+      return {
+        count: 12,
+        filled: month + fracMonth,
+      };
+    },
+  },
 };
 
-export const SCALE_ORDER: ScaleId[] = ['minute', 'hour', 'day'];
+export const SCALE_ORDER: ScaleId[] = ['minute', 'hour', 'day', 'month', 'year'];
 
 /**
  * SCALE_ORDER 上で `current` から `dir` (+1 / -1) 方向にスキャンし、
@@ -86,7 +160,20 @@ export function nextUnlockedScale(
   return null;
 }
 
-/** virtualMs から、当該スケールの現在の塗り目盛 (0 〜 count) を計算 */
+/**
+ * virtualMs / wallClockMs から現フレームの (count, filled) を返す統一エントリ。
+ * resolve() を持つスケールはそれを呼び、ない場合は静的 count + 単純 modulo で算出。
+ */
+export function snapshotScale(
+  scale: Scale,
+  virtualMs: number,
+  wallClockMs: number,
+): ScaleSnapshot {
+  if (scale.resolve) return scale.resolve(virtualMs, wallClockMs);
+  return { count: scale.count, filled: filledFor(scale, virtualMs) };
+}
+
+/** virtualMs から、当該スケールの現在の塗り目盛 (0 〜 count) を計算 (静的版) */
 export function filledFor(scale: Scale, virtualMs: number): number {
   // periodMs を超えた分は modulo (1 周期で 1 周ループ)
   const cycle = ((virtualMs % scale.periodMs) + scale.periodMs) % scale.periodMs;

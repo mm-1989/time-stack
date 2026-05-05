@@ -597,11 +597,6 @@ body::after {
   display: none;
 }
 
-/* 実時間モードでは経過時間 = JST 壁時計が同値なので JST 行を隠して情報密度を下げる */
-.hud-realtime .hud-jst {
-  display: none;
-}
-
 .hud-debug {
   margin-top: 8px;
   font: 400 10px/1.4 ui-monospace, monospace;
@@ -710,6 +705,8 @@ body::after {
 .scale-btn[data-scale="minute"] { --btn-color: #00f5ff; }
 .scale-btn[data-scale="hour"] { --btn-color: #4ad8ff; }
 .scale-btn[data-scale="day"] { --btn-color: #ff7a00; }
+.scale-btn[data-scale="month"] { --btn-color: #ff3a5e; }
+.scale-btn[data-scale="year"] { --btn-color: #c93cff; }
 .scale-btn:hover {
   color: var(--tron-cyan);
   background: rgba(0, 245, 255, 0.04);
@@ -950,21 +947,33 @@ body:not(.hud-loading) .mini-grid:not(.hidden) {
     padding: 1px 5px;
     font-size: 9px;
   }
-  /* スケール切替を HUD の下に移動して干渉を解消 */
+  /* スケール切替を HUD の下に移動して干渉を解消。5 ボタンが収まるよう余白を絞る */
   .scale-switch {
     top: auto;
     bottom: 60px;
-    padding: 4px;
-    gap: 4px;
+    padding: 3px;
+    gap: 2px;
+    max-width: calc(100vw - 16px);
+    overflow-x: auto;
+    scrollbar-width: none;
   }
+  .scale-switch::-webkit-scrollbar { display: none; }
   .scale-btn {
-    padding: 6px 12px;
-    font-size: 10px;
-    gap: 6px;
+    padding: 5px 8px;
+    font-size: 9px;
+    gap: 4px;
+    flex: 0 0 auto;
   }
   .scale-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
+  }
+}
+@media (max-width: 360px) {
+  .scale-btn {
+    padding: 4px 6px;
+    font-size: 8px;
+    letter-spacing: 0.1em;
   }
 }
 

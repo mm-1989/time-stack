@@ -647,8 +647,8 @@ export class TimeGrid {
       ctx.fillRect(x, barY, w, 1.2 * this.dpr);
       ctx.restore();
 
-      // 進行中マスの真下に「N + unit」ラベル(例: 14h / 35m / 47s)
-      // boost で大きくなったマスにぴったり接するように距離を詰めて、フォントも追従。
+      // 進行中マスの真下に「N + unit」ラベル(例: 14h / 35m / 47s / 5d / 8M)
+      // 1-indexed で表示 (tooltip と統一: 1 始まり)。
       const unit = opts.unit;
       if (unit) {
         const fontSize = Math.max(12, Math.min(22, Math.min(w, h) * 0.24));
@@ -659,7 +659,7 @@ export class TimeGrid {
         ctx.textBaseline = 'top';
         ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
         ctx.shadowBlur = 6 * this.dpr;
-        ctx.fillText(`${idx}${unit}`, x + w / 2, y + h + 2 * this.dpr);
+        ctx.fillText(`${idx + 1}${unit}`, x + w / 2, y + h + 2 * this.dpr);
         ctx.restore();
       }
     }
@@ -822,6 +822,16 @@ function formatElapsed(filled: number, opts: GridOptions): string {
   const unit = opts.unit;
   const intF = Math.floor(filled);
   const frac = filled - intF;
+  if (unit === 'M') {
+    // year scale: 月数 + 当月内日数
+    const subDays = Math.floor(frac * 30);
+    return `${intF}MO ${subDays}D ELAPSED`;
+  }
+  if (unit === 'd') {
+    // month scale: 日数 + 時刻フラクション
+    const subHours = Math.floor(frac * 24);
+    return `${intF}D ${subHours}H ELAPSED`;
+  }
   if (unit === 'h') {
     const subMin = Math.floor(frac * 60);
     return `${intF}H ${subMin}M ELAPSED`;
@@ -833,9 +843,11 @@ function formatElapsed(filled: number, opts: GridOptions): string {
   return `${filled.toFixed(2)}S ELAPSED`;
 }
 
-/** 進捗バー右側: スケール名 */
+/** 進捗バー右側: スケール名 (period の名前) */
 function cycleLabel(opts: GridOptions): string {
   const unit = opts.unit;
+  if (unit === 'M') return 'YEAR';
+  if (unit === 'd') return 'MONTH';
   if (unit === 'h') return 'DAY';
   if (unit === 'm') return 'HOUR';
   return 'MINUTE';

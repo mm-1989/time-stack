@@ -2,7 +2,7 @@ import './style.css';
 import { VirtualClock, elapsedSinceJstMidnight, formatJstClock } from './time';
 import { TimeGrid } from './grid';
 import { Hud } from './hud';
-import { SCALES, filledFor, type ScaleId } from './scales';
+import { SCALES, filledFor, snapshotScale, type ScaleId } from './scales';
 import { ScaleSwitch } from './scaleSwitch';
 import { MiniGrid } from './miniGrid';
 import { makePromotion } from './promotion';
@@ -73,22 +73,30 @@ function initApp(): void {
   const PROMOTE_TARGET: Record<ScaleId, ScaleId | null> = {
     minute: 'hour',
     hour: 'day',
-    day: null,
+    day: 'month',
+    month: 'year',
+    year: null,
   };
 
-  const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId));
+  // grid 初期化用に現フレーム snapshot を取得 (count が暦由来で動的なため)
+  const initSnapshot = snapshotScale(SCALES[currentScaleId], 0, Date.now());
+  const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId, initSnapshot.count));
   grid.setAnimSlow(animSlow);
+  /** 直近フレームの count。月跨ぎ等で count が変わったら grid.transitionTo で再構成 */
+  let lastSnapshotCount = initSnapshot.count;
   const hud = new Hud(document.body, { devMode });
   const miniGrid = new MiniGrid(document.body);
   const scaleSwitch = new ScaleSwitch(document.body, currentScaleId, changeScale);
   syncMiniScale();
 
   // ===== 5. ヘルパー =====
-  function scaleToGridOpts(id: ScaleId) {
+  function scaleToGridOpts(id: ScaleId, countOverride?: number) {
     const s = SCALES[id];
     return {
-      count: s.count,
-      // canvas 大見出しは「1 マスの単位」を端的に表示 ('SEC' / 'MIN' / 'HOUR')。
+      // resolve() を持つスケール (month) は壁時計暦に応じて count が動的に変わるので
+      // 呼び出し側で override を渡す。なければ既定値を使う。
+      count: countOverride ?? s.count,
+      // canvas 大見出しは「1 マスの単位」を端的に表示 ('SEC' / 'MIN' / 'HOUR' ...)。
       // 詳細な周期説明 (s.label) は aria-label に残し、視覚は短くする。
       scaleLabel: s.shortLabel,
       fillColor: s.fillColor,
@@ -99,13 +107,21 @@ function initApp(): void {
 
   function changeScale(newId: ScaleId): void {
     currentScaleId = newId;
-    grid.transitionTo(scaleToGridOpts(newId), performance.now());
+    const snap = snapshotScale(SCALES[newId], lastVirtualMs, Date.now());
+    lastSnapshotCount = snap.count;
+    grid.transitionTo(scaleToGridOpts(newId, snap.count), performance.now());
     prevCycleBucket = -1;
     syncMiniScale();
   }
 
   function syncMiniScale(): void {
-    miniGrid.setScale(PROMOTE_TARGET[currentScaleId]);
+    const upperId = PROMOTE_TARGET[currentScaleId];
+    if (!upperId) {
+      miniGrid.setScale(null);
+      return;
+    }
+    const upSnap = snapshotScale(SCALES[upperId], lastVirtualMs, Date.now());
+    miniGrid.setScale(upperId, upSnap.count);
   }
 
   function fitCanvas(): void {
@@ -289,18 +305,43 @@ function initApp(): void {
         scaleSwitch.setUnlocked('day', true);
         showUnlockMessage('1 DAY');
       }
+      if (virtualMs >= 86_400_000 && !scaleSwitch.isUnlocked('month')) {
+        scaleSwitch.setUnlocked('month', true);
+        showUnlockMessage('1 MONTH');
+      }
+      if (virtualMs >= 30 * 86_400_000 && !scaleSwitch.isUnlocked('year')) {
+        scaleSwitch.setUnlocked('year', true);
+        showUnlockMessage('1 YEAR');
+      }
     }
-    const filled = filledFor(SCALES[currentScaleId], virtualMs);
-    grid.setFilled(filled, now);
+    const wallMs = Date.now();
+    const snap = snapshotScale(SCALES[currentScaleId], virtualMs, wallMs);
+    // 月跨ぎ等で count が変わったら grid を再構成 (transitionTo でアニメ)
+    if (snap.count !== lastSnapshotCount) {
+      lastSnapshotCount = snap.count;
+      grid.transitionTo(scaleToGridOpts(currentScaleId, snap.count), now);
+    }
+    grid.setFilled(snap.filled, now);
     checkBoundaries(virtualMs, now);
-    checkCellComplete(filled);
+    checkCellComplete(snap.filled);
+    // 進捗バー: 各スケールの「自分内での進捗 0..1」を渡す。
+    // resolve() があるスケールは snapshot ベース、ないものは modulo 計算。
     scaleSwitch.updateProgress({
       minute: filledFor(SCALES.minute, virtualMs) / SCALES.minute.count,
       hour: filledFor(SCALES.hour, virtualMs) / SCALES.hour.count,
       day: filledFor(SCALES.day, virtualMs) / SCALES.day.count,
+      month: snapshotScale(SCALES.month, virtualMs, wallMs).filled /
+        snapshotScale(SCALES.month, virtualMs, wallMs).count,
+      year: snapshotScale(SCALES.year, virtualMs, wallMs).filled / 12,
     });
     const upperId = PROMOTE_TARGET[currentScaleId];
-    if (upperId) miniGrid.setFilled(filledFor(SCALES[upperId], virtualMs));
+    if (upperId) {
+      const upSnap = snapshotScale(SCALES[upperId], virtualMs, wallMs);
+      // miniGrid の count は同 setScale でべき等更新 (内部 early return)。
+      // 月跨ぎでの count 変化も拾う。
+      miniGrid.setScale(upperId, upSnap.count);
+      miniGrid.setFilled(upSnap.filled);
+    }
     const renderStart = perfRecord ? performance.now() : 0;
     grid.render(now);
     if (perfRecord) perfRecord(performance.now() - renderStart);
@@ -344,6 +385,8 @@ function initApp(): void {
     scaleSwitch.setUnlocked('minute', true);
     scaleSwitch.setUnlocked('hour', !progressiveUnlock);
     scaleSwitch.setUnlocked('day', !progressiveUnlock);
+    scaleSwitch.setUnlocked('month', !progressiveUnlock);
+    scaleSwitch.setUnlocked('year', !progressiveUnlock);
     if (progressiveUnlock && currentScaleId !== 'minute') {
       currentScaleId = 'minute';
       grid.transitionTo(scaleToGridOpts('minute'), performance.now());

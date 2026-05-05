@@ -6,11 +6,11 @@ type Lang = 'ja' | 'en';
 const messages: Record<Lang, Record<string, string>> = {
   ja: {
     'hint.shortcuts':
-      '<kbd>M</kbd>=sec / <kbd>H</kbd>=min / <kbd>D</kbd>=hour ・ <kbd>Space</kbd> 一時停止 ・ <kbd>S</kbd> サウンド',
+      '<kbd>M</kbd>=sec / <kbd>H</kbd>=min / <kbd>D</kbd>=hour / <kbd>O</kbd>=day / <kbd>Y</kbd>=month ・ <kbd>Space</kbd> 一時停止 ・ <kbd>S</kbd> サウンド',
     'hint.shortcuts.coarse':
       '<kbd>← →</kbd> スワイプでスケール切替',
     'hint.shortcuts.dev':
-      '<kbd>M</kbd>=sec / <kbd>H</kbd>=min / <kbd>D</kbd>=hour ・ <kbd>Space</kbd> 一時停止 ・ <kbd>S</kbd> サウンド ・ <kbd>Shift+Click</kbd> でジャンプ ・ <kbd>?debug=</kbd> / <kbd>?speed=</kbd>',
+      '<kbd>M</kbd>=sec / <kbd>H</kbd>=min / <kbd>D</kbd>=hour / <kbd>O</kbd>=day / <kbd>Y</kbd>=month ・ <kbd>Space</kbd> 一時停止 ・ <kbd>S</kbd> サウンド ・ <kbd>Shift+Click</kbd> でジャンプ ・ <kbd>?debug=</kbd> / <kbd>?speed=</kbd>',
     'hint.shortcuts.coarse.dev':
       '<kbd>← →</kbd> スワイプでスケール切替 ・ <kbd>?speed=N</kbd> 時間倍率 ・ <kbd>?debug=</kbd>',
     'init.title': '&gt;&nbsp;SELECT ORIGIN',
@@ -36,11 +36,11 @@ const messages: Record<Lang, Record<string, string>> = {
   },
   en: {
     'hint.shortcuts':
-      '<kbd>M</kbd>=sec / <kbd>H</kbd>=min / <kbd>D</kbd>=hour · <kbd>Space</kbd> pause · <kbd>S</kbd> sound',
+      '<kbd>M</kbd>=sec / <kbd>H</kbd>=min / <kbd>D</kbd>=hour / <kbd>O</kbd>=day / <kbd>Y</kbd>=month · <kbd>Space</kbd> pause · <kbd>S</kbd> sound',
     'hint.shortcuts.coarse':
       '<kbd>← →</kbd> swipe to switch scale',
     'hint.shortcuts.dev':
-      '<kbd>M</kbd>=sec / <kbd>H</kbd>=min / <kbd>D</kbd>=hour · <kbd>Space</kbd> pause · <kbd>S</kbd> sound · <kbd>Shift+Click</kbd> jump · <kbd>?debug=</kbd> / <kbd>?speed=</kbd>',
+      '<kbd>M</kbd>=sec / <kbd>H</kbd>=min / <kbd>D</kbd>=hour / <kbd>O</kbd>=day / <kbd>Y</kbd>=month · <kbd>Space</kbd> pause · <kbd>S</kbd> sound · <kbd>Shift+Click</kbd> jump · <kbd>?debug=</kbd> / <kbd>?speed=</kbd>',
     'hint.shortcuts.coarse.dev':
       '<kbd>← →</kbd> swipe scale · <kbd>?speed=N</kbd> multiplier · <kbd>?debug=</kbd>',
     'init.title': '&gt;&nbsp;SELECT ORIGIN',
