@@ -10,7 +10,7 @@
 // % 表記は使わず、すべて「x / y (分母分子明示)」で具体感を保つ。
 
 import type { Origin } from './origin';
-import { SCALES, snapshotScale, type ScaleId } from './scales';
+import { SCALES, snapshotScale, type ResolveContext, type ScaleId } from './scales';
 import { calendarBreakdown } from './time';
 import { t } from './i18n';
 
@@ -111,10 +111,20 @@ function renderHTML(
   originStartMs: number,
 ): string {
   const wallMs = Date.now();
+  const ctx: ResolveContext | undefined = origin
+    ? { originMs: originStartMs, originMode: origin.mode }
+    : undefined;
+  const isCountdown = origin?.mode === 'countdown';
+  // countdown 用に残時間 ms を計算 (target - now)。負値は 0 にクランプ。
+  const remainingMs = isCountdown && origin
+    ? Math.max(0, origin.date.getTime() - wallMs)
+    : 0;
   return [
-    renderHeader(virtualMs, origin, wallMs, originStartMs),
-    renderProgress(virtualMs, wallMs),
-    hourUnlocked ? renderAggregate(virtualMs) : '',
+    renderHeader(virtualMs, origin, wallMs, originStartMs, isCountdown, remainingMs),
+    renderProgress(virtualMs, wallMs, ctx, isCountdown),
+    hourUnlocked
+      ? (isCountdown ? renderAggregateRemaining(remainingMs) : renderAggregate(virtualMs))
+      : '',
     hourUnlocked && origin?.mode === 'custom'
       ? renderLifetime(virtualMs, origin.date)
       : '',
@@ -122,21 +132,27 @@ function renderHTML(
   ].join('');
 }
 
-/** 経過時間 (暦 breakdown) + 壁時計 */
+/** 経過時間 (暦 breakdown) + 壁時計。countdown では REMAINING を主表示。 */
 function renderHeader(
   virtualMs: number,
   _origin: Origin | undefined,
   wallMs: number,
   originStartMs: number,
+  isCountdown: boolean,
+  remainingMs: number,
 ): string {
-  const elapsed = formatBreakdown(originStartMs, virtualMs);
   const wd = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date(wallMs).getDay()];
   const wall = formatJstWall(wallMs);
+  // countdown は target - now の breakdown、それ以外は origin → now の累積 breakdown
+  const mainKey = isCountdown ? 'REMAINING' : 'ELAPSED';
+  const mainVal = isCountdown
+    ? formatBreakdown(wallMs, remainingMs)
+    : formatBreakdown(originStartMs, virtualMs);
   return `
     <div class="summary-header">
       <div class="summary-row-h">
-        <span class="summary-key">ELAPSED</span>
-        <span class="summary-val">${escapeHtml(elapsed)}</span>
+        <span class="summary-key">${mainKey}</span>
+        <span class="summary-val">${escapeHtml(mainVal)}</span>
       </div>
       <div class="summary-row-h">
         <span class="summary-key">WALL CLOCK</span>
@@ -146,11 +162,18 @@ function renderHeader(
   `;
 }
 
-/** C: 各スケールの進捗バー + x/y + (X%) 併記 */
-function renderProgress(virtualMs: number, wallMs: number): string {
+/** C: 各スケールの進捗バー + x/y + (X%) 併記。
+ *  countdown mode のときは snapshotScale が filled を反転して返す (= 残マス数)。
+ *  ラベルも "PROGRESS" → "REMAINING" に切り替えてセマンティクスを明示。 */
+function renderProgress(
+  virtualMs: number,
+  wallMs: number,
+  ctx: ResolveContext | undefined,
+  isCountdown: boolean,
+): string {
   const rows = SCALE_LIST.map((id) => {
     const s = SCALES[id];
-    const snap = snapshotScale(s, virtualMs, wallMs);
+    const snap = snapshotScale(s, virtualMs, wallMs, ctx);
     const filled = Math.floor(snap.filled);
     const ratio = Math.max(0, Math.min(1, snap.filled / snap.count));
     const label = s.shortLabel.toUpperCase();
@@ -162,10 +185,34 @@ function renderProgress(virtualMs: number, wallMs: number): string {
       </div>
     `;
   }).join('');
+  const heading = isCountdown ? 'REMAINING' : 'PROGRESS';
   return `
     <section class="summary-section">
-      <h3 class="summary-h3">PROGRESS</h3>
+      <h3 class="summary-h3">${heading}</h3>
       ${rows}
+    </section>
+  `;
+}
+
+/** D-countdown: 残時間の絶対量 (Hour アンロック後 + countdown のみ)。
+ *  累積版 (renderAggregate) と対称的に「target までの残り N 秒/分/時/日/年」を出す。 */
+function renderAggregateRemaining(remainingMs: number): string {
+  const seconds = Math.floor(remainingMs / 1000);
+  const minutes = Math.floor(remainingMs / 60_000);
+  const hours = Math.floor(remainingMs / 3_600_000);
+  const days = Math.floor(remainingMs / MS_PER_DAY);
+  const years = remainingMs / (DAYS_PER_YEAR * MS_PER_DAY);
+  const yearsTxt = years >= 1 ? Math.floor(years).toLocaleString() : years.toFixed(2);
+  return `
+    <section class="summary-section">
+      <h3 class="summary-h3">TOTAL REMAINING</h3>
+      <div class="summary-agg">
+        <div><span class="summary-num-big">${seconds.toLocaleString()}</span><span class="summary-unit">SEC</span></div>
+        <div><span class="summary-num-big">${minutes.toLocaleString()}</span><span class="summary-unit">MIN</span></div>
+        <div><span class="summary-num-big">${hours.toLocaleString()}</span><span class="summary-unit">HOUR</span></div>
+        <div><span class="summary-num-big">${days.toLocaleString()}</span><span class="summary-unit">DAY</span></div>
+        <div><span class="summary-num-big">${yearsTxt}</span><span class="summary-unit">YEAR</span></div>
+      </div>
     </section>
   `;
 }

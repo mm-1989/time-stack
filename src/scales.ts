@@ -200,6 +200,10 @@ export function nextUnlockedScale(
  * resolve() を持つスケールはそれを呼び、ない場合は静的 count + 単純 modulo で算出。
  * `ctx` は origin 情報。resolve() に forward され、custom origin 時に anniversary
  * 起点計算を有効化する。ctx 省略時は calendar 計算 (回帰互換)。
+ *
+ * countdown mode のときは最後に filled を反転 (count - filled) して返す。
+ * 砂時計パラダイム: 全マス filled スタート → target で 0 マスへ drain。
+ * sub-particles も同じ filled 経由なので追加修正不要。
  */
 export function snapshotScale(
   scale: Scale,
@@ -207,8 +211,16 @@ export function snapshotScale(
   wallClockMs: number,
   ctx?: ResolveContext,
 ): ScaleSnapshot {
-  if (scale.resolve) return scale.resolve(virtualMs, wallClockMs, ctx);
-  return { count: scale.count, filled: filledFor(scale, virtualMs) };
+  const base = scale.resolve
+    ? scale.resolve(virtualMs, wallClockMs, ctx)
+    : { count: scale.count, filled: filledFor(scale, virtualMs) };
+  if (ctx?.originMode === 'countdown') {
+    return {
+      count: base.count,
+      filled: Math.max(0, base.count - base.filled),
+    };
+  }
+  return base;
 }
 
 /** virtualMs から、当該スケールの現在の塗り目盛 (0 〜 count) を計算 (静的版) */

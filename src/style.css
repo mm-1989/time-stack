@@ -862,6 +862,21 @@ body::after {
   display: none;
 }
 
+/* countdown モードでは sand timer パラダイム: elapsed (経過) を出さず countdown
+   (残時間) を主役に。.hud-time を隠して .hud-countdown を大きく見せる。 */
+.hud.hud-countdown-mode .hud-time {
+  display: none;
+}
+.hud.hud-countdown-mode .hud-sub {
+  display: none;
+}
+.hud.hud-countdown-mode .hud-countdown {
+  margin-top: 0;
+  font-size: 22px;
+  letter-spacing: 0.10em;
+  text-shadow: 0 0 14px rgba(255, 122, 0, 0.55);
+}
+
 .hud-debug {
   margin-top: 8px;
   font: 400 10px/1.4 ui-monospace, monospace;

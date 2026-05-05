@@ -192,11 +192,92 @@ describe('snapshotScale (ctx による mode 分岐)', () => {
     expect(snap.filled).toBeLessThan(1.0);
   });
 
-  it('originMode=countdown → calendar (互換、anniversary は使わない)', () => {
+  it('originMode=countdown → calendar 計算 (anniversary 不使用) かつ filled が反転', () => {
     const snap = snapshotScale(SCALES.month, 0, wallMs, {
       ...customCtx,
       originMode: 'countdown',
     });
     expect(snap.count).toBe(31);
+    // calendar mode の filled = 4.5 (5/5 12:00) → countdown 反転で count - 4.5 = 26.5
+    expect(snap.filled).toBeCloseTo(26.5, 1);
+  });
+});
+
+describe('snapshotScale (countdown sand timer)', () => {
+  const wallMs = new Date(2026, 4, 5, 12, 0, 0).getTime();
+
+  it('countdown mode で minute scale: filled = 60 - 30 = 30', () => {
+    // virtualMs=30s → calendar mode で filled=30。countdown 反転で 60-30=30 (この場合同値だが)
+    const snap = snapshotScale(SCALES.minute, 30_000, wallMs, {
+      originMs: wallMs,
+      originMode: 'countdown',
+    });
+    expect(snap.count).toBe(60);
+    expect(snap.filled).toBe(30);
+  });
+
+  it('countdown mode で minute scale: virtualMs=10s → filled=50 (反転)', () => {
+    const snap = snapshotScale(SCALES.minute, 10_000, wallMs, {
+      originMs: wallMs,
+      originMode: 'countdown',
+    });
+    expect(snap.filled).toBe(50);
+  });
+
+  it('countdown mode で virtualMs=0 → filled = count (満タン)', () => {
+    const snap = snapshotScale(SCALES.minute, 0, wallMs, {
+      originMs: wallMs,
+      originMode: 'countdown',
+    });
+    expect(snap.filled).toBe(60);
+  });
+
+  it('countdown mode で virtualMs=periodMs (1 周分) → filled=count (modulo で 0 → 反転で count)', () => {
+    // 60s elapsed = 1 minute = 0 second of new cycle, calendar filled=0, countdown=count-0=count
+    const snap = snapshotScale(SCALES.minute, 60_000, wallMs, {
+      originMs: wallMs,
+      originMode: 'countdown',
+    });
+    expect(snap.filled).toBe(60);
+  });
+
+  it('countdown mode + custom origin で month: anniversary 計算結果が反転', () => {
+    // 1990-04-15 起点、now 2026-05-05 → custom anchor 2026-04-15 から 20 日経過
+    // calendar (anniversary) の filled=20、countdown 反転で count(30)-20=10
+    const snap = snapshotScale(SCALES.month, 0, wallMs, {
+      originMs: new Date(1990, 3, 15).getTime(),
+      originMode: 'countdown',
+    });
+    // anniversary 計算は countdown では無効なので calendar 計算に fallback。
+    // 5/5 12:00 → calendar filled=4.5、count=31、反転=26.5
+    expect(snap.count).toBe(31);
+    expect(snap.filled).toBeCloseTo(26.5, 1);
+  });
+
+  it('countdown mode で originMode 指定なし → 反転されない (回帰互換)', () => {
+    const snap = snapshotScale(SCALES.minute, 10_000, wallMs);
+    // ctx 省略 → calendar 累積、filled=10
+    expect(snap.filled).toBe(10);
+  });
+
+  it('countdown mode で year scale: 反転確認', () => {
+    // 5/5 → calendar filled = 4.x (5月、month idx=4)、countdown 反転 = 12-4.x ≈ 7.x
+    const snap = snapshotScale(SCALES.year, 0, wallMs, {
+      originMs: wallMs,
+      originMode: 'countdown',
+    });
+    expect(snap.count).toBe(12);
+    expect(snap.filled).toBeGreaterThan(7);
+    expect(snap.filled).toBeLessThan(8);
+  });
+
+  it('countdown mode で filled が負にならない (clamped to 0)', () => {
+    // 万一 base.filled > base.count となっても 0 で clamp
+    // 通常は起こらないが防御的テスト
+    const snap = snapshotScale(SCALES.minute, 0, wallMs, {
+      originMs: wallMs,
+      originMode: 'countdown',
+    });
+    expect(snap.filled).toBeGreaterThanOrEqual(0);
   });
 });

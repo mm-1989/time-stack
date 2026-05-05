@@ -351,7 +351,7 @@ function initApp(): void {
     if (perfRecord) perfRecord(performance.now() - renderStart);
     // 暦差分計算 (HUD elapsed / SUMMARY HEADER) に使う起点。buildCtx と同じ originMs。
     const originStartMs = ctx?.originMs ?? Date.now() - elapsedSinceJstMidnight(Date.now());
-    hud.update(virtualMs, speed, clock.frozen, originStartMs);
+    hud.update(virtualMs, speed, clock.frozen, originStartMs, activeOrigin?.mode);
     summary.update(virtualMs, activeOrigin, scaleSwitch.isUnlocked('hour'), originStartMs);
     if (activeOrigin?.mode === 'countdown') {
       hud.setCountdown(activeOrigin.date);

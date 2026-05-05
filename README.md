@@ -26,11 +26,13 @@ month / year は壁時計暦にアンカーされ、月跨ぎでマス数が動�
 
 origin (起点) のモードによって、month / year スケールの「サイクル境界」が自動で切り替わります。ユーザは何も設定せず `?since=` を付けるだけで HUD と grid の数値が一致します。
 
-| モード | 起動方法 | sec/min/hour/day | month / year | HUD 経過 |
+| モード | 起動方法 | grid 方向 | HUD | 概念 |
 |---|---|---|---|---|
-| **NOW** | デフォルト or 起動画面 NOW 選択 | virtualMs modulo (= 当日) | **壁時計暦** (今日は 5/5、今は May) | 当日経過 (Hh Mm Ss) |
-| **CUSTOM** | `?since=YYYY-MM-DD` | virtualMs modulo (anniversary 起点) | **anniversary 起点** (月命日サイクル / 年命日サイクル) | 起点累積 (Ny Nmo Nd HH:MM:SS) |
-| **COUNTDOWN** | `?until=YYYY-MM-DD` | virtualMs modulo | 壁時計暦 (NOW と同じ) | セッション経過 + 残時間 |
+| **NOW** | デフォルト or 起動画面 NOW 選択 | 累積 (0 → count) | 経過 (`HH:MM:SS`) | 「いま何時何分か」 |
+| **CUSTOM** | `?since=YYYY-MM-DD` | 累積 (anniversary 起点) | 経過累積 (`Ny Mmo Wd HH:MM:SS`) | 「何年生きたか」 |
+| **COUNTDOWN** | `?until=YYYY-MM-DD` | **drain (count → 0、砂時計)** | 残時間プロミネント (`→ target · Nd Nh Nm Ns 残`) | **「残何日か」** |
+
+countdown は **砂時計パラダイム**: page load 時刻 = T0、target = 0 cells。時間経過と共にすべてのスケールで cells が削れていく。HUD の経過時間表示は隠れ、残時間が主役に。SUMMARY も `REMAINING` ラベル + `TOTAL REMAINING` セクションで残時間ベースに切り替わる。
 
 ### 例: `?since=1990-04-15` の場合
 

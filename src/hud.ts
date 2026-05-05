@@ -76,7 +76,17 @@ export class Hud {
     this.scheduleHintHide();
   }
 
-  update(virtualMs: number, speed: number, frozen: boolean, originStartMs: number): void {
+  update(
+    virtualMs: number,
+    speed: number,
+    frozen: boolean,
+    originStartMs: number,
+    mode: 'now' | 'custom' | 'countdown' | undefined = 'now',
+  ): void {
+    // countdown mode では elapsed を出さず countdown を主役にする (sand timer 表現)。
+    // CSS class でレイアウト制御 (.hud-countdown-mode で .hud-time 非表示 + .hud-countdown 拡大)
+    this.wrap.classList.toggle('hud-countdown-mode', mode === 'countdown');
+
     // 暦差分: ?since=1990-04-15 で 36y 0mo 20d など。NOW モードは原則 1 日未満なので
     // years/months は 0 になり、時刻のみが残る (graceful degradation)。
     const bd = calendarBreakdown(originStartMs, virtualMs);
