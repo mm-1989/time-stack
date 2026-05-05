@@ -5,6 +5,8 @@ import { Hud } from './hud';
 import {
   SCALES,
   filledFor,
+  findCountdownNaturalScale,
+  lockedCountdownScales,
   snapshotScale,
   type ResolveContext,
   type ScaleId,
@@ -65,6 +67,10 @@ function initApp(): void {
   let clock: VirtualClock | undefined;
   let activeOrigin: Origin | undefined;
   let progressiveUnlock = false;
+  /** countdown mode の natural scale (B+C 設計)。session 中固定 */
+  let countdownNaturalScale: ScaleId | null = null;
+  /** countdown 全期間 ms (= target - sessionStart)。natural scale の count 計算用 */
+  let countdownTotalMs = 0;
   let prevCycleBucket = -1;
   let prevDayBucket = -1;
   let prevFilledFloor = -1;
@@ -126,6 +132,7 @@ function initApp(): void {
   /**
    * 現在の activeOrigin から ResolveContext を組み立てる。
    * custom origin のときに anniversary 起点計算が有効化される。
+   * countdown のときは natural scale + total/remaining を載せて B 設計を有効化。
    * activeOrigin 未確定 (bootstrap 中) は undefined を返す。
    */
   function buildCtx(): ResolveContext | undefined {
@@ -133,7 +140,13 @@ function initApp(): void {
     const originMs = activeOrigin.mode === 'custom' || activeOrigin.mode === 'countdown'
       ? activeOrigin.date.getTime()
       : Date.now() - elapsedSinceJstMidnight(Date.now());
-    return { originMs, originMode: activeOrigin.mode };
+    const ctx: ResolveContext = { originMs, originMode: activeOrigin.mode };
+    if (activeOrigin.mode === 'countdown' && countdownNaturalScale) {
+      ctx.countdownNaturalScale = countdownNaturalScale;
+      ctx.countdownTotalMs = countdownTotalMs;
+      ctx.countdownRemainingMs = Math.max(0, activeOrigin.date.getTime() - Date.now());
+    }
+    return ctx;
   }
 
   function fitCanvas(): void {
@@ -404,6 +417,25 @@ function initApp(): void {
     if (progressiveUnlock && currentScaleId !== 'minute') {
       currentScaleId = 'minute';
       grid.transitionTo(scaleToGridOpts('minute'), performance.now());
+    }
+
+    // countdown mode: natural scale を確定し、それより大きい scale を lock。
+    // natural scale は countdown 全期間を 1 サイクル化して表示する (option B)。
+    if (origin.mode === 'countdown') {
+      countdownTotalMs = Math.max(0, origin.date.getTime() - Date.now());
+      countdownNaturalScale = findCountdownNaturalScale(countdownTotalMs);
+      const locked = lockedCountdownScales(countdownNaturalScale);
+      for (const id of locked) {
+        scaleSwitch.setUnlocked(id, false);
+      }
+      // 起動時 currentScale が lock されている場合は natural にフォールバック
+      if (locked.has(currentScaleId)) {
+        const fallback = countdownNaturalScale ?? 'minute';
+        currentScaleId = fallback;
+        const snap = snapshotScale(SCALES[fallback], 0, Date.now(), buildCtx());
+        lastSnapshotCount = snap.count;
+        grid.transitionTo(scaleToGridOpts(fallback, snap.count), performance.now());
+      }
     }
 
     const initEl = document.getElementById('init-overlay');

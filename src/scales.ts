@@ -22,6 +22,10 @@ export interface ScaleSnapshot {
  * resolve() 呼び出し時の文脈。origin が custom モードかどうかで月/年の anchor が
  * 変わる (custom → anniversary 起点 / それ以外 → 壁時計暦)。
  *
+ * countdown mode 用に追加情報も載せる:
+ *  - countdownNaturalScale: countdown 全期間を 1 サイクル化する scale id
+ *  - countdownTotalMs / countdownRemainingMs: その scale の count/filled 算出に使う
+ *
  * 省略時 (= ctx 自体が undefined) は origin 不明として calendar 計算にフォールバック。
  * 既存テスト (ctx 省略) の挙動を保つため optional。
  */
@@ -30,6 +34,46 @@ export interface ResolveContext {
   originMs?: number;
   /** origin のモード。'custom' のときのみ anniversary 計算が走る。 */
   originMode?: 'now' | 'custom' | 'countdown';
+  /**
+   * countdown mode で「全期間を 1 サイクルとして見せる」natural scale。
+   * この scale だけは count/filled を countdown 直接マップ (= per-cycle drain ではなく
+   * 全 countdown を 1 cell ごとの単位で drain) で上書きする。
+   */
+  countdownNaturalScale?: ScaleId;
+  /** countdown 全期間 (= target - sessionStart)。natural scale の count 算出用 */
+  countdownTotalMs?: number;
+  /** 現在の countdown 残時間 (= target - now)。natural scale の filled 算出用 */
+  countdownRemainingMs?: number;
+}
+
+/**
+ * countdown total から natural scale を決定する純関数。
+ * 「period >= total」を満たす最小 scale を返す。total > 1 年なら null (= natural なし)。
+ */
+export function findCountdownNaturalScale(totalMs: number): ScaleId | null {
+  if (totalMs <= 0) return null;
+  for (const id of SCALE_ORDER) {
+    if (SCALES[id].periodMs >= totalMs) return id;
+  }
+  return null;
+}
+
+/**
+ * countdown mode で lock すべき scale 集合 (= natural より大きい scale)。
+ * natural が null (countdown > 1y) なら空集合 (lock なし、全 scale per-cycle)。
+ */
+export function lockedCountdownScales(naturalScale: ScaleId | null): Set<ScaleId> {
+  const locked = new Set<ScaleId>();
+  if (!naturalScale) return locked;
+  let past = false;
+  for (const id of SCALE_ORDER) {
+    if (id === naturalScale) {
+      past = true;
+      continue;
+    }
+    if (past) locked.add(id);
+  }
+  return locked;
 }
 
 export interface Scale {
@@ -201,9 +245,12 @@ export function nextUnlockedScale(
  * `ctx` は origin 情報。resolve() に forward され、custom origin 時に anniversary
  * 起点計算を有効化する。ctx 省略時は calendar 計算 (回帰互換)。
  *
- * countdown mode のときは最後に filled を反転 (count - filled) して返す。
- * 砂時計パラダイム: 全マス filled スタート → target で 0 マスへ drain。
- * sub-particles も同じ filled 経由なので追加修正不要。
+ * countdown mode の挙動:
+ *  - ctx.countdownNaturalScale === scale.id のとき: 「natural scale」扱い。
+ *    count = floor(total / msPerCell)、filled = floor(remaining / msPerCell) で
+ *    countdown 全期間を 1 サイクル化。filled 反転は不要 (filled が既に「残量」)。
+ *  - 上記以外: 通常の resolve / filledFor 結果に対し filled を反転 (count - filled)。
+ *    砂時計の per-cycle drain として表示 (per-cycle 残量)。
  */
 export function snapshotScale(
   scale: Scale,
@@ -211,6 +258,18 @@ export function snapshotScale(
   wallClockMs: number,
   ctx?: ResolveContext,
 ): ScaleSnapshot {
+  // countdown natural scale は countdown 全期間を直接マップ (per-cycle 経由しない)
+  if (
+    ctx?.originMode === 'countdown' &&
+    ctx.countdownNaturalScale === scale.id &&
+    ctx.countdownTotalMs != null &&
+    ctx.countdownRemainingMs != null &&
+    scale.msPerCell > 0
+  ) {
+    const count = Math.max(1, Math.floor(ctx.countdownTotalMs / scale.msPerCell));
+    const filled = Math.max(0, Math.min(count, ctx.countdownRemainingMs / scale.msPerCell));
+    return { count, filled };
+  }
   const base = scale.resolve
     ? scale.resolve(virtualMs, wallClockMs, ctx)
     : { count: scale.count, filled: filledFor(scale, virtualMs) };

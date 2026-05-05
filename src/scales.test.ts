@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   filledFor,
+  findCountdownNaturalScale,
+  lockedCountdownScales,
   nextUnlockedScale,
   SCALES,
   snapshotScale,
@@ -279,5 +281,112 @@ describe('snapshotScale (countdown sand timer)', () => {
       originMode: 'countdown',
     });
     expect(snap.filled).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('findCountdownNaturalScale', () => {
+  it('30 sec → minute (60s period が初めて total を上回る)', () => {
+    expect(findCountdownNaturalScale(30 * 1000)).toBe('minute');
+  });
+  it('30 min → hour (1h period が初めて total を上回る)', () => {
+    expect(findCountdownNaturalScale(30 * 60_000)).toBe('hour');
+  });
+  it('12 h → day', () => {
+    expect(findCountdownNaturalScale(12 * 3_600_000)).toBe('day');
+  });
+  it('5 d → month (30d period が初めて total を上回る)', () => {
+    expect(findCountdownNaturalScale(5 * 86_400_000)).toBe('month');
+  });
+  it('29 d → month (約 30d periodがちょうど超える)', () => {
+    expect(findCountdownNaturalScale(29 * 86_400_000)).toBe('month');
+  });
+  it('1 year (365d) → year', () => {
+    expect(findCountdownNaturalScale(365 * 86_400_000)).toBe('year');
+  });
+  it('1 year ぴったり (= year period) → year (period >= total)', () => {
+    expect(findCountdownNaturalScale(SCALES.year.periodMs)).toBe('year');
+  });
+  it('5 年 (year period 超え) → null (natural なし、全 scale per-cycle)', () => {
+    expect(findCountdownNaturalScale(5 * 365 * 86_400_000)).toBe(null);
+  });
+  it('total <= 0 → null', () => {
+    expect(findCountdownNaturalScale(0)).toBe(null);
+    expect(findCountdownNaturalScale(-1000)).toBe(null);
+  });
+});
+
+describe('lockedCountdownScales', () => {
+  it('natural=null → 空集合 (lock なし)', () => {
+    expect(Array.from(lockedCountdownScales(null))).toEqual([]);
+  });
+  it('natural=minute → hour/day/month/year ロック', () => {
+    expect(Array.from(lockedCountdownScales('minute')).sort()).toEqual(
+      ['day', 'hour', 'month', 'year'].sort(),
+    );
+  });
+  it('natural=month → year のみロック', () => {
+    expect(Array.from(lockedCountdownScales('month'))).toEqual(['year']);
+  });
+  it('natural=year → 何もロックしない (year が最大)', () => {
+    expect(Array.from(lockedCountdownScales('year'))).toEqual([]);
+  });
+});
+
+describe('snapshotScale (countdown natural scale 上書き)', () => {
+  const wallMs = new Date(2026, 4, 5, 12, 0, 0).getTime();
+  const ctxBase = (override: Partial<Parameters<typeof snapshotScale>[3]> = {}) => ({
+    originMode: 'countdown' as const,
+    originMs: wallMs,
+    countdownTotalMs: 29 * 86_400_000,
+    countdownRemainingMs: 29 * 86_400_000,
+    countdownNaturalScale: 'month' as ScaleId,
+    ...override,
+  });
+
+  it('natural=month、29日 countdown で count=29、filled=29 (開始直後)', () => {
+    const snap = snapshotScale(SCALES.month, 0, wallMs, ctxBase());
+    expect(snap.count).toBe(29);
+    expect(snap.filled).toBeCloseTo(29, 5);
+  });
+
+  it('natural=month、半分経過で filled が 14.5 (= 14d 12h 残)', () => {
+    const snap = snapshotScale(SCALES.month, 0, wallMs, ctxBase({
+      countdownRemainingMs: 14.5 * 86_400_000,
+    }));
+    expect(snap.count).toBe(29);
+    expect(snap.filled).toBeCloseTo(14.5, 3);
+  });
+
+  it('natural=month、target 通過で filled=0', () => {
+    const snap = snapshotScale(SCALES.month, 0, wallMs, ctxBase({
+      countdownRemainingMs: 0,
+    }));
+    expect(snap.filled).toBe(0);
+  });
+
+  it('natural scale で remaining > total になったら count に clamp', () => {
+    const snap = snapshotScale(SCALES.month, 0, wallMs, ctxBase({
+      countdownRemainingMs: 100 * 86_400_000, // 100 日 (異常値)
+    }));
+    expect(snap.filled).toBeLessThanOrEqual(snap.count);
+  });
+
+  it('non-natural scale (例: day) は countdown 反転 (per-cycle drain) のまま', () => {
+    // day scale: virtualMs=3h で base.filled=3、countdown invert で 24-3=21
+    const snap = snapshotScale(SCALES.day, 3 * 3_600_000, wallMs, ctxBase());
+    expect(snap.count).toBe(24);
+    expect(snap.filled).toBe(21);
+  });
+
+  it('countdownNaturalScale が ctx に無いときは natural override されない', () => {
+    const snap = snapshotScale(SCALES.month, 0, wallMs, {
+      originMode: 'countdown',
+      originMs: wallMs,
+      // countdownNaturalScale 未指定
+    });
+    // 通常の countdown 反転 (per-cycle): May は 31 日、5/5 12:00 → calendar filled=4.5
+    // → countdown invert = 31 - 4.5 = 26.5
+    expect(snap.count).toBe(31);
+    expect(snap.filled).toBeCloseTo(26.5, 1);
   });
 });
