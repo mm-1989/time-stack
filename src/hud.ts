@@ -80,16 +80,23 @@ export class Hud {
     // 暦差分: ?since=1990-04-15 で 36y 0mo 20d など。NOW モードは原則 1 日未満なので
     // years/months は 0 になり、時刻のみが残る (graceful degradation)。
     const bd = calendarBreakdown(originStartMs, virtualMs);
+    // 経過 2 年未満 + MO が出る粒度 (≥30 日) なら累計週数を MO に併記。
+    // 「これまで何週?」を直感把握するためのオルタナ単位ビュー。
+    const totalWeeks = Math.floor(Math.max(0, virtualMs) / (7 * 86_400_000));
+    const showWeeks = bd.years < 2 && (bd.years > 0 || bd.months > 0);
+    const wkSpan = showWeeks
+      ? `<span class="wk">(${totalWeeks}<span class="u">w</span>)</span> `
+      : ' ';
 
     let prefix = '';
     if (bd.years > 0) {
       prefix =
         `<span class="d">${bd.years}</span><span class="u">y</span> ` +
-        `<span class="d">${bd.months}</span><span class="u">mo</span> ` +
+        `<span class="d">${bd.months}</span><span class="u">mo</span>${wkSpan}` +
         `<span class="d">${bd.days}</span><span class="u">d</span> `;
     } else if (bd.months > 0) {
       prefix =
-        `<span class="d">${bd.months}</span><span class="u">mo</span> ` +
+        `<span class="d">${bd.months}</span><span class="u">mo</span>${wkSpan}` +
         `<span class="d">${bd.days}</span><span class="u">d</span> `;
     } else if (bd.days > 0) {
       prefix = `<span class="d">${bd.days}</span><span class="u">d</span> `;

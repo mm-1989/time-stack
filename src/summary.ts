@@ -245,12 +245,21 @@ function renderOriginInfo(origin: Origin | undefined): string {
 
 function pad2(n: number): string { return String(n).padStart(2, '0'); }
 
-/** 暦 breakdown を `1y 2mo 14d HH:MM:SS` 風に整形 (上位の 0 単位は省略)。 */
+/**
+ * 暦 breakdown を `1y 6mo(78w) 14d HH:MM:SS` 風に整形。
+ * 経過 2 年未満 かつ MO 表示粒度のときは MO の直後に累計週数を併記。
+ * 上位の 0 単位は省略。
+ */
 function formatBreakdown(originStartMs: number, virtualMs: number): string {
   const bd = calendarBreakdown(originStartMs, virtualMs);
   const time = `${pad2(bd.hours)}:${pad2(bd.minutes)}:${pad2(bd.seconds)}`;
-  if (bd.years > 0) return `${bd.years}y ${bd.months}mo ${bd.days}d ${time}`;
-  if (bd.months > 0) return `${bd.months}mo ${bd.days}d ${time}`;
+  const totalWeeks = Math.floor(Math.max(0, virtualMs) / (7 * 86_400_000));
+  const showWeeks = bd.years < 2 && (bd.years > 0 || bd.months > 0);
+  const moPart = showWeeks
+    ? `${bd.months}mo(${totalWeeks}w)`
+    : `${bd.months}mo`;
+  if (bd.years > 0) return `${bd.years}y ${moPart} ${bd.days}d ${time}`;
+  if (bd.months > 0) return `${moPart} ${bd.days}d ${time}`;
   if (bd.days > 0) return `${bd.days}d ${time}`;
   return time;
 }

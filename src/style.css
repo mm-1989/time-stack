@@ -811,6 +811,20 @@ body::after {
   margin: 0 2px;
   text-shadow: none;
 }
+/* 経過 2 年未満で MO 単位の隣に併記する累計週数。控えめに dim。 */
+.hud-time .wk {
+  font-size: 0.45em;
+  color: var(--tron-text-dim);
+  letter-spacing: 0.08em;
+  margin-right: 6px;
+  text-shadow: none;
+  font-variant-numeric: tabular-nums;
+}
+.hud-time .wk .u {
+  font-size: 0.85em;
+  margin-left: 1px;
+  margin-right: 0;
+}
 .hud-time.hud-frozen {
   color: var(--tron-orange);
   text-shadow: 0 0 12px rgba(255, 122, 0, 0.5);
