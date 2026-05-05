@@ -150,23 +150,19 @@ export class Hud {
         `<span class="hud-cd-remain">${t('hud.countdown.reached')}</span>`;
       return;
     }
-    const totalSec = Math.floor(remaining / 1000);
-    const days = Math.floor(totalSec / 86400);
-    const hours = Math.floor(totalSec / 3600) % 24;
-    const mins = Math.floor(totalSec / 60) % 60;
-    const secs = totalSec % 60;
+    // 暦差分で remaining を分解 (うるう年・月長を反映)。
+    // SUMMARY HEADER も同じ calendarBreakdown を使うので両者の数値が一致する。
+    const wallMs = Date.now();
+    const bd = calendarBreakdown(wallMs, remaining);
     let remainText: string;
-    if (days >= 365) {
-      // > 1 年: 暦差分で年/月/日まで
-      const years = Math.floor(days / 365);
-      const remDays = days - years * 365;
-      const months = Math.floor(remDays / 30);
-      const subDays = remDays - months * 30;
-      remainText = `${years}Y ${months}MO ${subDays}D`;
-    } else if (days > 0) {
-      remainText = `${days}D ${pad(hours)}H ${pad(mins)}M`;
+    if (bd.years > 0) {
+      remainText = `${bd.years}Y ${bd.months}MO ${bd.days}D`;
+    } else if (bd.months > 0) {
+      remainText = `${bd.months}MO ${bd.days}D ${pad(bd.hours)}H`;
+    } else if (bd.days > 0) {
+      remainText = `${bd.days}D ${pad(bd.hours)}H ${pad(bd.minutes)}M`;
     } else {
-      remainText = `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+      remainText = `${pad(bd.hours)}:${pad(bd.minutes)}:${pad(bd.seconds)}`;
     }
     this.countdownEl.innerHTML =
       `<span class="hud-cd-target">${targetLabel}</span>` +
