@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filledFor, SCALES } from './scales';
+import { filledFor, nextUnlockedScale, SCALES, type ScaleId } from './scales';
 
 describe('filledFor (minute scale)', () => {
   it('30 seconds → 30 cells', () => {
@@ -39,5 +39,39 @@ describe('filledFor (negative virtualMs)', () => {
   it('negative wraps positively (modulo)', () => {
     // -30 sec → 60 - 30 = 30 で wrapped
     expect(filledFor(SCALES.minute, -30_000)).toBe(30);
+  });
+});
+
+describe('nextUnlockedScale', () => {
+  const all = (...ids: ScaleId[]): ReadonlySet<ScaleId> => new Set(ids);
+
+  it('全 unlocked: minute → +1 → hour', () => {
+    expect(nextUnlockedScale('minute', all('minute', 'hour', 'day'), 1)).toBe('hour');
+  });
+
+  it('全 unlocked: day → +1 → minute (循環)', () => {
+    expect(nextUnlockedScale('day', all('minute', 'hour', 'day'), 1)).toBe('minute');
+  });
+
+  it('全 unlocked: minute → -1 → day (循環)', () => {
+    expect(nextUnlockedScale('minute', all('minute', 'hour', 'day'), -1)).toBe('day');
+  });
+
+  it('hour ロック中: minute → +1 → day (hour を飛ばす)', () => {
+    expect(nextUnlockedScale('minute', all('minute', 'day'), 1)).toBe('day');
+  });
+
+  it('hour と day ロック中: minute → +1 → null (移動先なし)', () => {
+    expect(nextUnlockedScale('minute', all('minute'), 1)).toBe(null);
+  });
+
+  it('progressive unlock 序盤: minute のみ unlock、両方向ともに null', () => {
+    expect(nextUnlockedScale('minute', all('minute'), 1)).toBe(null);
+    expect(nextUnlockedScale('minute', all('minute'), -1)).toBe(null);
+  });
+
+  it('現在地もロック中の異常系でも crash しない', () => {
+    // 通常起こらないが、レース等で current が unlock 集合外になっても安全に動く
+    expect(nextUnlockedScale('day', all('minute'), 1)).toBe('minute');
   });
 });

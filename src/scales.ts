@@ -60,6 +60,30 @@ export const SCALES: Record<ScaleId, Scale> = {
 
 export const SCALE_ORDER: ScaleId[] = ['minute', 'hour', 'day'];
 
+/**
+ * SCALE_ORDER 上で `current` から `dir` (+1 / -1) 方向にスキャンし、
+ * 最初に見つかった「current 以外の」 unlocked スケールを返す。
+ * すべてロック / unlocked が current のみなら null (= 移動先なし)。
+ *
+ * scaleSwitch.cycle (キーボード `[` `]` / タッチ swipe) の合流ロジック。
+ * DOM に依存しないので単体テスト可能。
+ */
+export function nextUnlockedScale(
+  current: ScaleId,
+  unlocked: ReadonlySet<ScaleId>,
+  dir: 1 | -1,
+): ScaleId | null {
+  const i = SCALE_ORDER.indexOf(current);
+  // step は length-1 まで (= 自分以外を全部見たら停止)。length まで回すと
+  // 最後に current 自身を再評価してしまい「他に unlock されたものが無いのに
+  // current を返す」誤動作になる。
+  for (let step = 1; step < SCALE_ORDER.length; step++) {
+    const next = SCALE_ORDER[(i + dir * step + SCALE_ORDER.length) % SCALE_ORDER.length];
+    if (unlocked.has(next)) return next;
+  }
+  return null;
+}
+
 /** virtualMs から、当該スケールの現在の塗り目盛 (0 〜 count) を計算 */
 export function filledFor(scale: Scale, virtualMs: number): number {
   // periodMs を超えた分は modulo (1 周期で 1 周ループ)

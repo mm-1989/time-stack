@@ -1,4 +1,4 @@
-import { SCALE_ORDER, SCALES, type ScaleId } from './scales';
+import { SCALE_ORDER, SCALES, nextUnlockedScale, type ScaleId } from './scales';
 import { t } from './i18n';
 
 // スケール切替 UI: 上部中央に 3 ボタン。クリック / キーボード (m/h/d) / 矢印切替に対応。
@@ -42,17 +42,18 @@ export class ScaleSwitch {
       if (e.code === 'KeyM') this.set('minute');
       else if (e.code === 'KeyH') this.set('hour');
       else if (e.code === 'KeyD') this.set('day');
-      else if (e.code === 'BracketLeft' || e.code === 'BracketRight') {
-        const dir = e.code === 'BracketRight' ? 1 : -1;
-        const i = SCALE_ORDER.indexOf(this.current);
-        const next = SCALE_ORDER[(i + dir + SCALE_ORDER.length) % SCALE_ORDER.length];
-        this.set(next);
-      }
+      else if (e.code === 'BracketLeft') this.cycle(-1);
+      else if (e.code === 'BracketRight') this.cycle(1);
     });
   }
 
+  /**
+   * 直接指定でスケールに遷移する。ロック中のスケールへの遷移は no-op。
+   * クリック / キーボード (M/H/D) / 内部 cycle すべての終着点。
+   */
   set(id: ScaleId): void {
     if (this.current === id) return;
+    if (!this.unlockedSet.has(id)) return;
     this.current = id;
     this.refresh();
     this.onChange(id);
@@ -60,17 +61,12 @@ export class ScaleSwitch {
 
   /**
    * 現スケールから dir 方向 (+1=次 / -1=前) へ巡回。ロック中のスケールは飛ばす。
-   * 全部ロックされている場合は何もしない。
+   * キーボード `[` / `]` とタッチ swipe の共通エントリポイント。
+   * 巡回ロジックは scales.ts の nextUnlockedScale に純関数として抽出済み。
    */
   cycle(dir: 1 | -1): void {
-    const i = SCALE_ORDER.indexOf(this.current);
-    for (let step = 1; step <= SCALE_ORDER.length; step++) {
-      const next = SCALE_ORDER[(i + dir * step + SCALE_ORDER.length) % SCALE_ORDER.length];
-      if (this.unlockedSet.has(next)) {
-        this.set(next);
-        return;
-      }
-    }
+    const next = nextUnlockedScale(this.current, this.unlockedSet, dir);
+    if (next) this.set(next);
   }
 
   /** バッジ中心の画面座標 (CSS px)。promotion 飛行のターゲットに使う */
