@@ -316,25 +316,32 @@ body::after {
 }
 
 /* サウンドオン/オフインジケータ (右下、フッターの上) */
+/* サウンドインジケータ: 右上の Σ ボタンの直下に配置。
+   旧: 右下 (bottom: 38px) に置いていたが、canvas の進捗テキスト / footer /
+   hint と重なっていたので右上スタックへ移行。 */
 .sound-indicator {
   position: fixed;
-  right: 48px;
-  bottom: 38px;
+  top: max(68px, calc(env(safe-area-inset-top) + 40px));
+  right: max(14px, env(safe-area-inset-right));
   font: 500 9px/1 'JetBrains Mono', ui-monospace, monospace;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(0, 245, 255, 0.32);
+  color: rgba(0, 245, 255, 0.45);
+  background: rgba(0, 0, 0, 0.45);
   cursor: pointer;
   user-select: none;
-  z-index: 5;
-  padding: 4px 8px;
-  border: 1px solid transparent;
+  z-index: 11;
+  padding: 6px 10px;
+  border: 1px solid var(--tron-line);
   border-radius: 2px;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 .sound-indicator:hover {
   color: var(--tron-cyan);
-  border-color: var(--tron-line);
+  border-color: var(--tron-line-strong);
 }
 .sound-indicator.on {
   color: var(--tron-cyan);
@@ -342,9 +349,8 @@ body::after {
 }
 @media (max-width: 640px) {
   .sound-indicator {
-    right: 36px;
-    bottom: 30px;
     font-size: 8px;
+    padding: 5px 8px;
   }
 }
 

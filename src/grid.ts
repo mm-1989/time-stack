@@ -811,8 +811,13 @@ export class TimeGrid {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(left, areaX, y + 10 * this.dpr);
-    ctx.textAlign = 'right';
-    ctx.fillText(right, areaX + areaW, y + 10 * this.dpr);
+    // 右側 "% of HOUR" は SUMMARY (Σ) と冗長なのでモバイル幅では非表示にして
+    // bottom-right の sound / footer / 進捗テキスト の三重重なりを解消する。
+    const isMobileWidth = window.innerWidth <= 640;
+    if (!isMobileWidth) {
+      ctx.textAlign = 'right';
+      ctx.fillText(right, areaX + areaW, y + 10 * this.dpr);
+    }
     void W;
   }
 }
