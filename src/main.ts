@@ -16,6 +16,7 @@ import {
 import { setupKonami, showEasterEggMessage } from './easterEgg';
 import { maybeRunAudioTest, setupPromotionDebug, setupAudioDebug, setupPerfDebug } from './debug';
 import { setupSoundIndicator, setupHoverTooltip, setupMouseParallax } from './widgets';
+import { bindGestures } from './gestures';
 import { initLang, t } from './i18n';
 
 // 言語検出 (?lang=en or navigator.language) を最初に実行
@@ -27,6 +28,8 @@ const speed = Math.max(0.1, parseFloat(params.get('speed') ?? '1'));
 const animSlow = Math.max(0.1, parseFloat(params.get('animSlow') ?? '1'));
 const resetStart = params.has('reset');
 const debug = params.get('debug');
+/** 開発者向けヒント表示モード。?dev=1 で Shift+Click 等のデバッグショートカットをヒントに含める */
+const devMode = params.get('dev') === '1';
 
 // PWA: 本番ビルド (import.meta.env.PROD) のときだけ Service Worker を登録。
 // dev 環境では SW を登録しない (localhost SW hijack を構造的に回避、
@@ -79,7 +82,7 @@ function initApp(): void {
 
   const grid = new TimeGrid(canvas, scaleToGridOpts(currentScaleId));
   grid.setAnimSlow(animSlow);
-  const hud = new Hud(document.body);
+  const hud = new Hud(document.body, { devMode });
   const miniGrid = new MiniGrid(document.body);
   const scaleSwitch = new ScaleSwitch(document.body, currentScaleId, changeScale);
   syncMiniScale();
@@ -148,6 +151,18 @@ function initApp(): void {
   const soundIndicator = setupSoundIndicator();
   setupHoverTooltip(canvas, grid, () => currentScaleId, () => lastVirtualMs);
   setupMouseParallax(canvas);
+
+  // タッチデバイスの横スワイプで前後スケール切替
+  bindGestures(canvas, {
+    onSwipeNext: () => {
+      scaleSwitch.cycle(1);
+      if (typeof navigator.vibrate === 'function') navigator.vibrate(8);
+    },
+    onSwipePrev: () => {
+      scaleSwitch.cycle(-1);
+      if (typeof navigator.vibrate === 'function') navigator.vibrate(8);
+    },
+  });
 
   const pausedEl = document.getElementById('paused-overlay');
 

@@ -14,7 +14,8 @@ export class Hud {
   private hintEl: HTMLDivElement;
   private hintTimer: number | null = null;
 
-  constructor(parent: HTMLElement) {
+  constructor(parent: HTMLElement, opts: { devMode?: boolean } = {}) {
+    const devMode = opts.devMode ?? false;
     this.wrap = document.createElement('div');
     this.wrap.className = 'hud';
     this.wrap.setAttribute('role', 'status');
@@ -46,7 +47,10 @@ export class Hud {
     this.hintEl.className = 'hud-hint';
     // モバイルでは tap 操作 + ヒントとバッジの干渉回避のため M/H/D 部分を省略
     const isCoarse = window.matchMedia('(max-width: 640px), (pointer: coarse)').matches;
-    this.hintEl.innerHTML = isCoarse ? t('hint.shortcuts.coarse') : t('hint.shortcuts');
+    const key = devMode
+      ? (isCoarse ? 'hint.shortcuts.coarse.dev' : 'hint.shortcuts.dev')
+      : (isCoarse ? 'hint.shortcuts.coarse' : 'hint.shortcuts');
+    this.hintEl.innerHTML = t(key);
     parent.appendChild(this.hintEl);
 
     requestAnimationFrame(() => {

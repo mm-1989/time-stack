@@ -58,6 +58,21 @@ export class ScaleSwitch {
     this.onChange(id);
   }
 
+  /**
+   * 現スケールから dir 方向 (+1=次 / -1=前) へ巡回。ロック中のスケールは飛ばす。
+   * 全部ロックされている場合は何もしない。
+   */
+  cycle(dir: 1 | -1): void {
+    const i = SCALE_ORDER.indexOf(this.current);
+    for (let step = 1; step <= SCALE_ORDER.length; step++) {
+      const next = SCALE_ORDER[(i + dir * step + SCALE_ORDER.length) % SCALE_ORDER.length];
+      if (this.unlockedSet.has(next)) {
+        this.set(next);
+        return;
+      }
+    }
+  }
+
   /** バッジ中心の画面座標 (CSS px)。promotion 飛行のターゲットに使う */
   getButtonCenter(id: ScaleId): { x: number; y: number } | null {
     const btn = this.buttons.get(id);
