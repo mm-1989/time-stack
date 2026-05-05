@@ -124,9 +124,13 @@ export class TimeGrid {
 
     const padX = W * 0.08;
     const padTop = H * 0.18;
-    // モバイル幅では下部に scale-switch (固定 bottom:60px) があるので、canvas 進捗バー
-    // との重なりを避けるため padBot を増やす。デスクトップは従来通り。
-    const padBot = window.innerWidth <= 640 ? H * 0.22 : H * 0.18;
+    // モバイル幅では下部 scale-switch (CSS bottom:60px、pill 高 ~30px = top 90px from
+    // bottom) と進捗バー (CSS bottom 130px に固定) との位置関係を保つため、padBot を
+    // 「H*0.18 以上 かつ canvas で CSS 145px 以上」とする。短い画面 (iPhone SE 等) で
+    // cells が進捗バーまで降りてくるのを防ぐ。デスクトップは比例値そのまま。
+    const padBot = window.innerWidth <= 640
+      ? Math.max(H * 0.18, 145 * this.dpr)
+      : H * 0.18;
     const areaX = padX;
     const areaY = padTop;
     const areaW = W - padX * 2;
@@ -268,9 +272,13 @@ export class TimeGrid {
     // グリッド占有領域
     const padX = W * 0.08;
     const padTop = H * 0.18;
-    // モバイル幅では下部に scale-switch (固定 bottom:60px) があるので、canvas 進捗バー
-    // との重なりを避けるため padBot を増やす。デスクトップは従来通り。
-    const padBot = window.innerWidth <= 640 ? H * 0.22 : H * 0.18;
+    // モバイル幅では下部 scale-switch (CSS bottom:60px、pill 高 ~30px = top 90px from
+    // bottom) と進捗バー (CSS bottom 130px に固定) との位置関係を保つため、padBot を
+    // 「H*0.18 以上 かつ canvas で CSS 145px 以上」とする。短い画面 (iPhone SE 等) で
+    // cells が進捗バーまで降りてくるのを防ぐ。デスクトップは比例値そのまま。
+    const padBot = window.innerWidth <= 640
+      ? Math.max(H * 0.18, 145 * this.dpr)
+      : H * 0.18;
     const areaX = padX;
     const areaY = padTop;
     const areaW = W - padX * 2;
@@ -797,7 +805,12 @@ export class TimeGrid {
     const N = opts.count;
     const color = opts.fillColor;
     const barH = 1 * this.dpr;
-    const y = this.canvas.height - padBot * 0.55;
+    // モバイル幅では下部に scale-switch (固定 bottom:60px、pill 高 ~30px = top edge
+    // 90px from bottom) があるため、進捗バー位置を CSS 130px from bottom に固定して
+    // pill との間に 20px 以上の安全な余白を作る。デスクトップは従来式 (padBot 比例)。
+    const y = window.innerWidth <= 640
+      ? this.canvas.height - 130 * this.dpr
+      : this.canvas.height - padBot * 0.55;
     ctx.fillStyle = 'rgba(0, 245, 255, 0.08)';
     ctx.fillRect(areaX, y, areaW, barH);
     const ratio = filled / N;
