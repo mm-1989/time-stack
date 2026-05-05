@@ -128,8 +128,11 @@ export class TimeGrid {
     // bottom) と進捗バー (CSS bottom 130px に固定) との位置関係を保つため、padBot を
     // 「H*0.18 以上 かつ canvas で CSS 145px 以上」とする。短い画面 (iPhone SE 等) で
     // cells が進捗バーまで降りてくるのを防ぐ。デスクトップは比例値そのまま。
+    // 進行中マスの直下に "Nh / Nm / Ns / Nd / NM" ラベルが描画され (boost 時は
+     // 通常より下に伸びる)、進捗バー (CSS bottom 130) に被るのを防ぐため、padBot を
+     // CSS 175px 以上に確保する。これで label bottom と bar の間に 20px 以上の余白。
     const padBot = window.innerWidth <= 640
-      ? Math.max(H * 0.18, 145 * this.dpr)
+      ? Math.max(H * 0.18, 175 * this.dpr)
       : H * 0.18;
     const areaX = padX;
     const areaY = padTop;
@@ -276,8 +279,11 @@ export class TimeGrid {
     // bottom) と進捗バー (CSS bottom 130px に固定) との位置関係を保つため、padBot を
     // 「H*0.18 以上 かつ canvas で CSS 145px 以上」とする。短い画面 (iPhone SE 等) で
     // cells が進捗バーまで降りてくるのを防ぐ。デスクトップは比例値そのまま。
+    // 進行中マスの直下に "Nh / Nm / Ns / Nd / NM" ラベルが描画され (boost 時は
+     // 通常より下に伸びる)、進捗バー (CSS bottom 130) に被るのを防ぐため、padBot を
+     // CSS 175px 以上に確保する。これで label bottom と bar の間に 20px 以上の余白。
     const padBot = window.innerWidth <= 640
-      ? Math.max(H * 0.18, 145 * this.dpr)
+      ? Math.max(H * 0.18, 175 * this.dpr)
       : H * 0.18;
     const areaX = padX;
     const areaY = padTop;
