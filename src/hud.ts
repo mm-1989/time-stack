@@ -133,15 +133,21 @@ export class Hud {
     this.debugEl.textContent = text;
   }
 
-  /** countdown モード時の残時間表示。null で非表示。 */
+  /** countdown モード時の残時間表示。null で非表示。
+   *  2 行構成: target (小さく) + remaining (大きく)。
+   *  remaining は短い磁性 (>1y は `Ny Nmo Nd`、>1d は `Nd Nh Nm`、それ未満は `H:M:S`)。
+   */
   setCountdown(targetDate: Date | null): void {
     if (!targetDate) {
-      this.countdownEl.textContent = '';
+      this.countdownEl.innerHTML = '';
       return;
     }
+    const targetLabel = `→ ${formatTargetDate(targetDate)}`;
     const remaining = targetDate.getTime() - Date.now();
     if (remaining <= 0) {
-      this.countdownEl.textContent = `→ ${formatTargetDate(targetDate)} · ${t('hud.countdown.reached')}`;
+      this.countdownEl.innerHTML =
+        `<span class="hud-cd-target">${targetLabel}</span>` +
+        `<span class="hud-cd-remain">${t('hud.countdown.reached')}</span>`;
       return;
     }
     const totalSec = Math.floor(remaining / 1000);
@@ -149,12 +155,22 @@ export class Hud {
     const hours = Math.floor(totalSec / 3600) % 24;
     const mins = Math.floor(totalSec / 60) % 60;
     const secs = totalSec % 60;
-    const parts = [];
-    if (days > 0) parts.push(`${days}D`);
-    if (days > 0 || hours > 0) parts.push(`${pad(hours)}H`);
-    parts.push(`${pad(mins)}M`);
-    parts.push(`${pad(secs)}S`);
-    this.countdownEl.textContent = `→ ${formatTargetDate(targetDate)} · ${parts.join(' ')} ${t('hud.countdown.suffix')}`;
+    let remainText: string;
+    if (days >= 365) {
+      // > 1 年: 暦差分で年/月/日まで
+      const years = Math.floor(days / 365);
+      const remDays = days - years * 365;
+      const months = Math.floor(remDays / 30);
+      const subDays = remDays - months * 30;
+      remainText = `${years}Y ${months}MO ${subDays}D`;
+    } else if (days > 0) {
+      remainText = `${days}D ${pad(hours)}H ${pad(mins)}M`;
+    } else {
+      remainText = `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+    }
+    this.countdownEl.innerHTML =
+      `<span class="hud-cd-target">${targetLabel}</span>` +
+      `<span class="hud-cd-remain">${remainText}</span>`;
   }
 }
 

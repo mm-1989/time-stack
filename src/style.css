@@ -863,7 +863,7 @@ body::after {
 }
 
 /* countdown モードでは sand timer パラダイム: elapsed (経過) を出さず countdown
-   (残時間) を主役に。.hud-time を隠して .hud-countdown を大きく見せる。 */
+   (残時間) を主役に。.hud-time を隠して .hud-countdown を 2 行構成で見せる。 */
 .hud.hud-countdown-mode .hud-time {
   display: none;
 }
@@ -872,9 +872,28 @@ body::after {
 }
 .hud.hud-countdown-mode .hud-countdown {
   margin-top: 0;
-  font-size: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   letter-spacing: 0.10em;
+  text-shadow: none;
+}
+.hud.hud-countdown-mode .hud-cd-target {
+  font: 500 11px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.18em;
+  color: rgba(255, 168, 80, 0.7);
+}
+.hud.hud-countdown-mode .hud-cd-remain {
+  font: 700 26px/1.05 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  color: var(--tron-orange);
   text-shadow: 0 0 14px rgba(255, 122, 0, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 480px) {
+  .hud.hud-countdown-mode .hud-cd-remain {
+    font-size: 20px;
+  }
 }
 
 .hud-debug {
