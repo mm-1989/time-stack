@@ -53,7 +53,9 @@ const SCENARIOS = [
   // 13 = 30 日後 countdown (natural=month、year のみ lock。month scale = 30 cells)
   // 14 = 5 時間後 countdown (natural=day、month/year lock。day scale = 5 cells)
   { name: '13-countdown-30d-month', query: `until=${dateOffsetIsoDate(30)}&unlock=all&scale=month`, wait: 1500 },
-  { name: '14-countdown-5h-day', query: `until=${dateOffsetIsoTime(5 * 3600)}&unlock=all&scale=day`, wait: 1500 },
+  // 8h offset: 5h だと capture 起動ラグで count=4 < MIN_CELLS (=5) で natural=null
+  // にフォールバックしてしまうため、余裕を見て 8h (count=8) で natural=day を確実化。
+  { name: '14-countdown-8h-day', query: `until=${dateOffsetIsoTime(8 * 3600)}&unlock=all&scale=day`, wait: 1500 },
 ];
 
 /** N 日後の YYYY-MM-DD を返す (UTC ベース、URL パーサに渡す形) */
