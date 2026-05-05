@@ -7,6 +7,25 @@ import { t } from './i18n';
 // 曜日 3 文字 (TRON aesthetic: 大文字英)。getDay() の 0=日 に揃える。
 const WEEKDAY = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
 
+/**
+ * countdown HUD で表示する残時間文字列を組み立てる純関数。
+ * SUMMARY HEADER (formatBreakdown) と同じく `calendarBreakdown` を経由して暦正確、
+ * うるう年・月長 (28〜31) も自動反映。残量に応じて磁性切替:
+ *  - ≥ 1 年: "Ny Mmo Dd"
+ *  - 1〜11 ヶ月: "Mmo Dd HH"
+ *  - 1〜29 日: "Dd HH:MM"
+ *  - < 1 日: "HH:MM:SS"
+ *  - ≤ 0: 空文字列 (caller が REACHED 表示に切り替え)
+ */
+export function formatCountdownRemain(remainingMs: number, wallMs: number): string {
+  if (remainingMs <= 0) return '';
+  const bd = calendarBreakdown(wallMs, remainingMs);
+  if (bd.years > 0) return `${bd.years}Y ${bd.months}MO ${bd.days}D`;
+  if (bd.months > 0) return `${bd.months}MO ${bd.days}D ${pad(bd.hours)}H`;
+  if (bd.days > 0) return `${bd.days}D ${pad(bd.hours)}H ${pad(bd.minutes)}M`;
+  return `${pad(bd.hours)}:${pad(bd.minutes)}:${pad(bd.seconds)}`;
+}
+
 export class Hud {
   private wrap: HTMLDivElement;
   private elapsedEl: HTMLDivElement;
@@ -150,20 +169,8 @@ export class Hud {
         `<span class="hud-cd-remain">${t('hud.countdown.reached')}</span>`;
       return;
     }
-    // 暦差分で remaining を分解 (うるう年・月長を反映)。
-    // SUMMARY HEADER も同じ calendarBreakdown を使うので両者の数値が一致する。
-    const wallMs = Date.now();
-    const bd = calendarBreakdown(wallMs, remaining);
-    let remainText: string;
-    if (bd.years > 0) {
-      remainText = `${bd.years}Y ${bd.months}MO ${bd.days}D`;
-    } else if (bd.months > 0) {
-      remainText = `${bd.months}MO ${bd.days}D ${pad(bd.hours)}H`;
-    } else if (bd.days > 0) {
-      remainText = `${bd.days}D ${pad(bd.hours)}H ${pad(bd.minutes)}M`;
-    } else {
-      remainText = `${pad(bd.hours)}:${pad(bd.minutes)}:${pad(bd.seconds)}`;
-    }
+    // 暦正確な残時間文字列を組み立て (formatCountdownRemain は単体テスト済み純関数)。
+    const remainText = formatCountdownRemain(remaining, Date.now());
     this.countdownEl.innerHTML =
       `<span class="hud-cd-target">${targetLabel}</span>` +
       `<span class="hud-cd-remain">${remainText}</span>`;
