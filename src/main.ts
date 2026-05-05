@@ -17,6 +17,7 @@ import { setupKonami, showEasterEggMessage } from './easterEgg';
 import { maybeRunAudioTest, setupPromotionDebug, setupAudioDebug, setupPerfDebug } from './debug';
 import { setupSoundIndicator, setupHoverTooltip, setupMouseParallax } from './widgets';
 import { bindGestures } from './gestures';
+import { registerSwWithUpdateToast } from './updateToast';
 import { initLang, t } from './i18n';
 
 // 言語検出 (?lang=en or navigator.language) を最初に実行
@@ -31,15 +32,10 @@ const debug = params.get('debug');
 /** 開発者向けヒント表示モード。?dev=1 で Shift+Click 等のデバッグショートカットをヒントに含める */
 const devMode = params.get('dev') === '1';
 
-// PWA: 本番ビルド (import.meta.env.PROD) のときだけ Service Worker を登録。
-// dev 環境では SW を登録しない (localhost SW hijack を構造的に回避、
-// feedback_localhost_sw_hijack.md の教訓)。
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {
-      /* SW 登録失敗は無視 (=非対応ブラウザ等) */
-    });
-  });
+// PWA: 本番ビルドのときだけ Service Worker を登録 + 更新検知トースト配線。
+// dev 環境では SW を登録しない (feedback_localhost_sw_hijack.md の教訓)。
+if (import.meta.env.PROD) {
+  window.addEventListener('load', () => registerSwWithUpdateToast());
 }
 
 // ?audioTest=1 のときは通常 UI 起動を skip して 3 秒の WAV だけ合成

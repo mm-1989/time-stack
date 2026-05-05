@@ -30,6 +30,9 @@ const messages: Record<Lang, Record<string, string>> = {
     'sound.aria': 'サウンド ON/OFF 切替',
     'sound.tooltip': 'S キーでオンオフ',
     'canvas.aria': '時間グリッドのビジュアライザ',
+    'update.available': '新しいバージョンがあります',
+    'update.reload': '更新',
+    'update.dismiss': '閉じる',
   },
   en: {
     'hint.shortcuts':
@@ -57,6 +60,9 @@ const messages: Record<Lang, Record<string, string>> = {
     'sound.aria': 'Toggle sound',
     'sound.tooltip': 'Press S to toggle',
     'canvas.aria': 'Time grid visualizer',
+    'update.available': 'New version available',
+    'update.reload': 'Update',
+    'update.dismiss': 'Dismiss',
   },
 };
 

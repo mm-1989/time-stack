@@ -374,6 +374,81 @@ body::after {
 }
 
 /* TRON: イースターエッグ メッセージ overlay */
+/* PWA 更新通知トースト。下部中央に slide-up で出現、× で閉じる、ボタンで即時更新。 */
+.update-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  transform: translate(-50%, 16px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(0, 8, 14, 0.92);
+  border: 1px solid rgba(0, 245, 255, 0.45);
+  box-shadow: 0 0 16px rgba(0, 245, 255, 0.25);
+  border-radius: 2px;
+  font: 500 12px/1.2 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--tron-text-bright);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  z-index: 250;
+  opacity: 0;
+  transition: opacity 220ms ease, transform 220ms ease;
+  max-width: calc(100vw - 24px);
+}
+.update-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.update-toast__msg {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.update-toast__btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--tron-cyan);
+  color: var(--tron-cyan);
+  padding: 6px 12px;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.update-toast__btn:hover {
+  background: rgba(0, 245, 255, 0.12);
+}
+.update-toast__btn:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+.update-toast__close {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--tron-text-dim);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.update-toast__close:hover {
+  color: var(--tron-text-bright);
+}
+@media (max-width: 480px) {
+  .update-toast {
+    font-size: 11px;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .update-toast__btn {
+    padding: 5px 9px;
+  }
+}
+
 .tron-message {
   position: fixed;
   top: 50%;
