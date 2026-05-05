@@ -33,6 +33,9 @@ const messages: Record<Lang, Record<string, string>> = {
     'update.available': '新しいバージョンがあります',
     'update.reload': '更新',
     'update.dismiss': '閉じる',
+    'summary.open': 'サマリーを開く',
+    'summary.close': '閉じる',
+    'summary.title': 'タイムサマリー',
   },
   en: {
     'hint.shortcuts':
@@ -63,6 +66,9 @@ const messages: Record<Lang, Record<string, string>> = {
     'update.available': 'New version available',
     'update.reload': 'Update',
     'update.dismiss': 'Dismiss',
+    'summary.open': 'Open summary',
+    'summary.close': 'Close',
+    'summary.title': 'Time summary',
   },
 };
 

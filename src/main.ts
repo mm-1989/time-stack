@@ -17,6 +17,7 @@ import { setupKonami, showEasterEggMessage } from './easterEgg';
 import { maybeRunAudioTest, setupPromotionDebug, setupAudioDebug, setupPerfDebug } from './debug';
 import { setupSoundIndicator, setupHoverTooltip, setupMouseParallax } from './widgets';
 import { bindGestures } from './gestures';
+import { createSummary } from './summary';
 import { registerSwWithUpdateToast } from './updateToast';
 import { initLang, t } from './i18n';
 
@@ -87,6 +88,7 @@ function initApp(): void {
   const hud = new Hud(document.body, { devMode });
   const miniGrid = new MiniGrid(document.body);
   const scaleSwitch = new ScaleSwitch(document.body, currentScaleId, changeScale);
+  const summary = createSummary(document.body);
   syncMiniScale();
 
   // ===== 5. ヘルパー =====
@@ -346,6 +348,7 @@ function initApp(): void {
     grid.render(now);
     if (perfRecord) perfRecord(performance.now() - renderStart);
     hud.update(virtualMs, speed, clock.frozen);
+    summary.update(virtualMs, activeOrigin, scaleSwitch.isUnlocked('hour'));
     if (activeOrigin?.mode === 'countdown') {
       hud.setCountdown(activeOrigin.date);
     }

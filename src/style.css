@@ -374,6 +374,245 @@ body::after {
 }
 
 /* TRON: イースターエッグ メッセージ overlay */
+/* ---------- SUMMARY (Σ ボタン + モーダル overlay) ---------- */
+.summary-btn {
+  position: fixed;
+  top: max(28px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--tron-line);
+  color: var(--tron-cyan);
+  font: 700 16px/1 'JetBrains Mono', ui-monospace, monospace;
+  border-radius: 2px;
+  cursor: pointer;
+  z-index: 11;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.summary-btn:hover {
+  border-color: var(--tron-line-strong);
+  color: #b0f8ff;
+  transform: scale(1.06);
+}
+.summary-btn[aria-expanded="true"] {
+  background: rgba(0, 245, 255, 0.15);
+  color: #b0f8ff;
+}
+
+.summary-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.summary-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.summary-modal {
+  position: relative;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 28px 24px;
+  background: rgba(2, 6, 12, 0.94);
+  border: 1px solid var(--tron-cyan);
+  box-shadow: 0 0 24px rgba(0, 245, 255, 0.25), inset 0 0 16px rgba(0, 245, 255, 0.06);
+  font: 500 13px/1.5 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--tron-text-bright);
+}
+.summary-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--tron-text-dim);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.summary-close:hover {
+  color: var(--tron-cyan);
+}
+
+.summary-title {
+  margin: 0 0 18px;
+  font: 700 14px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.2em;
+  color: var(--tron-cyan);
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.6);
+}
+
+.summary-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(0, 245, 255, 0.18);
+}
+.summary-section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.summary-h3 {
+  margin: 0 0 10px;
+  font: 600 11px/1 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.24em;
+  color: var(--tron-text-dim);
+  text-transform: uppercase;
+}
+.summary-h3-sub {
+  font-size: 10px;
+  color: var(--tron-text-dim);
+  letter-spacing: 0.18em;
+}
+
+.summary-header .summary-row-h {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.summary-header .summary-key {
+  color: var(--tron-text-dim);
+  letter-spacing: 0.18em;
+  font-size: 11px;
+}
+.summary-header .summary-val {
+  color: #b0f8ff;
+  letter-spacing: 0.05em;
+}
+
+/* PROGRESS rows */
+.summary-prog-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+}
+.summary-prog-label {
+  width: 52px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--tron-text-dim);
+}
+.summary-prog-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1px;
+  position: relative;
+  overflow: hidden;
+}
+.summary-prog-fill {
+  height: 100%;
+  width: calc(var(--p, 0) * 100%);
+  background: var(--c, var(--tron-cyan));
+  box-shadow: 0 0 8px var(--c, var(--tron-cyan));
+  transition: width 200ms ease;
+}
+.summary-prog-num {
+  width: 80px;
+  text-align: right;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: #d6f5ff;
+}
+
+/* AGGREGATE: 大きな数値の縦並び */
+.summary-agg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.summary-agg > div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.summary-num-big {
+  flex: 1;
+  text-align: right;
+  font: 700 18px/1.2 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  color: #d6f5ff;
+  font-variant-numeric: tabular-nums;
+}
+.summary-unit {
+  width: 60px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--tron-text-dim);
+}
+
+/* LIFETIME */
+.summary-life {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.summary-life-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--tron-text-dim);
+}
+.summary-life-num {
+  font: 600 14px/1 'JetBrains Mono', ui-monospace, monospace;
+  color: #ff9ec7;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.summary-life-meta {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--tron-text-dim);
+  letter-spacing: 0.2em;
+}
+
+.summary-foot {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(0, 245, 255, 0.18);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--tron-text-dim);
+}
+
+@media (max-width: 480px) {
+  .summary-modal {
+    padding: 22px 18px 18px;
+    font-size: 12px;
+  }
+  .summary-prog-label { width: 44px; }
+  .summary-prog-num { width: 64px; font-size: 11px; }
+  .summary-num-big { font-size: 16px; }
+  .summary-unit { width: 50px; font-size: 10px; }
+}
+
 /* PWA 更新通知トースト。下部中央に slide-up で出現、× で閉じる、ボタンで即時更新。 */
 .update-toast {
   position: fixed;
