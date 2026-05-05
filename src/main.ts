@@ -347,8 +347,14 @@ function initApp(): void {
     const renderStart = perfRecord ? performance.now() : 0;
     grid.render(now);
     if (perfRecord) perfRecord(performance.now() - renderStart);
-    hud.update(virtualMs, speed, clock.frozen);
-    summary.update(virtualMs, activeOrigin, scaleSwitch.isUnlocked('hour'));
+    // 暦差分計算 (Ny Ymo Md HH:MM:SS) に使う起点。
+    //   custom/countdown: 指定された Date
+    //   NOW: 「JST 本日 0:00:00」(virtualMs はそこからの経過)
+    const originStartMs = activeOrigin?.mode === 'custom' || activeOrigin?.mode === 'countdown'
+      ? activeOrigin.date.getTime()
+      : Date.now() - elapsedSinceJstMidnight(Date.now());
+    hud.update(virtualMs, speed, clock.frozen, originStartMs);
+    summary.update(virtualMs, activeOrigin, scaleSwitch.isUnlocked('hour'), originStartMs);
     if (activeOrigin?.mode === 'countdown') {
       hud.setCountdown(activeOrigin.date);
     }

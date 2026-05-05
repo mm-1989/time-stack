@@ -11,6 +11,7 @@
 
 import type { Origin } from './origin';
 import { SCALES, snapshotScale, type ScaleId } from './scales';
+import { calendarBreakdown } from './time';
 import { t } from './i18n';
 
 export interface SummaryAPI {
@@ -18,8 +19,13 @@ export interface SummaryAPI {
   hide(): void;
   toggle(): void;
   isVisible(): boolean;
-  /** virtualMs / origin / hour アンロック状態を渡して表示更新 */
-  update(virtualMs: number, origin: Origin | undefined, hourUnlocked: boolean): void;
+  /** virtualMs / origin / hour アンロック状態 / 暦起点 ms を渡して表示更新 */
+  update(
+    virtualMs: number,
+    origin: Origin | undefined,
+    hourUnlocked: boolean,
+    originStartMs: number,
+  ): void;
 }
 
 const SCALE_LIST: ScaleId[] = ['minute', 'hour', 'day', 'month', 'year'];
@@ -85,9 +91,14 @@ export function createSummary(parent: HTMLElement): SummaryAPI {
     if (visible && e.code === 'Escape') hide();
   });
 
-  function update(virtualMs: number, origin: Origin | undefined, hourUnlocked: boolean): void {
+  function update(
+    virtualMs: number,
+    origin: Origin | undefined,
+    hourUnlocked: boolean,
+    originStartMs: number,
+  ): void {
     if (!visible) return;
-    body.innerHTML = renderHTML(virtualMs, origin, hourUnlocked);
+    body.innerHTML = renderHTML(virtualMs, origin, hourUnlocked, originStartMs);
   }
 
   return { show, hide, toggle, isVisible: () => visible, update };
@@ -97,10 +108,11 @@ function renderHTML(
   virtualMs: number,
   origin: Origin | undefined,
   hourUnlocked: boolean,
+  originStartMs: number,
 ): string {
   const wallMs = Date.now();
   return [
-    renderHeader(virtualMs, origin, wallMs),
+    renderHeader(virtualMs, origin, wallMs, originStartMs),
     renderProgress(virtualMs, wallMs),
     hourUnlocked ? renderAggregate(virtualMs) : '',
     hourUnlocked && origin?.mode === 'custom'
@@ -110,9 +122,14 @@ function renderHTML(
   ].join('');
 }
 
-/** 経過時間 + 壁時計 */
-function renderHeader(virtualMs: number, _origin: Origin | undefined, wallMs: number): string {
-  const elapsed = formatElapsedFull(virtualMs);
+/** 経過時間 (暦 breakdown) + 壁時計 */
+function renderHeader(
+  virtualMs: number,
+  _origin: Origin | undefined,
+  wallMs: number,
+  originStartMs: number,
+): string {
+  const elapsed = formatBreakdown(originStartMs, virtualMs);
   const wd = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date(wallMs).getDay()];
   const wall = formatJstWall(wallMs);
   return `
@@ -129,7 +146,7 @@ function renderHeader(virtualMs: number, _origin: Origin | undefined, wallMs: nu
   `;
 }
 
-/** C: 各スケールの進捗バー + x/y */
+/** C: 各スケールの進捗バー + x/y + (X%) 併記 */
 function renderProgress(virtualMs: number, wallMs: number): string {
   const rows = SCALE_LIST.map((id) => {
     const s = SCALES[id];
@@ -141,7 +158,7 @@ function renderProgress(virtualMs: number, wallMs: number): string {
       <div class="summary-prog-row" style="--p:${ratio};--c:${s.fillColor};">
         <span class="summary-prog-label">${label}</span>
         <div class="summary-prog-bar"><div class="summary-prog-fill"></div></div>
-        <span class="summary-prog-num">${filled} / ${snap.count}</span>
+        <span class="summary-prog-num">${filled} / ${snap.count} <span class="summary-pct">(${formatPct(ratio)})</span></span>
       </div>
     `;
   }).join('');
@@ -186,6 +203,7 @@ function renderLifetime(virtualMs: number, originDate: Date): string {
   const lifeDays = Math.floor(lifeYears * DAYS_PER_YEAR);
   const lifeHours = lifeDays * 24;
 
+  const ratio = years / lifeYears;
   const yYrs = years.toFixed(1);
   const yDays = Math.floor(days).toLocaleString();
   const yHours = Math.floor(hours).toLocaleString();
@@ -196,15 +214,15 @@ function renderLifetime(virtualMs: number, originDate: Date): string {
       <div class="summary-life">
         <div class="summary-life-row">
           <span>YEARS</span>
-          <span class="summary-life-num">${yYrs} / ${lifeYears}</span>
+          <span class="summary-life-num">${yYrs} / ${lifeYears} <span class="summary-pct">(${formatPct(ratio)})</span></span>
         </div>
         <div class="summary-life-row">
           <span>DAYS</span>
-          <span class="summary-life-num">${yDays} / ${lifeDays.toLocaleString()}</span>
+          <span class="summary-life-num">${yDays} / ${lifeDays.toLocaleString()} <span class="summary-pct">(${formatPct(ratio)})</span></span>
         </div>
         <div class="summary-life-row">
           <span>HOURS</span>
-          <span class="summary-life-num">${yHours} / ${lifeHours.toLocaleString()}</span>
+          <span class="summary-life-num">${yHours} / ${lifeHours.toLocaleString()} <span class="summary-pct">(${formatPct(ratio)})</span></span>
         </div>
         <div class="summary-life-meta">FROM ${formatYmd(originDate)}</div>
       </div>
@@ -227,14 +245,27 @@ function renderOriginInfo(origin: Origin | undefined): string {
 
 function pad2(n: number): string { return String(n).padStart(2, '0'); }
 
-function formatElapsedFull(virtualMs: number): string {
-  const totalSec = Math.floor(Math.max(0, virtualMs) / 1000);
-  const sec = totalSec % 60;
-  const min = Math.floor(totalSec / 60) % 60;
-  const hour = Math.floor(totalSec / 3600) % 24;
-  const day = Math.floor(totalSec / 86400);
-  const time = `${pad2(hour)}:${pad2(min)}:${pad2(sec)}`;
-  return day > 0 ? `${day}d ${time}` : time;
+/** 暦 breakdown を `1y 2mo 14d HH:MM:SS` 風に整形 (上位の 0 単位は省略)。 */
+function formatBreakdown(originStartMs: number, virtualMs: number): string {
+  const bd = calendarBreakdown(originStartMs, virtualMs);
+  const time = `${pad2(bd.hours)}:${pad2(bd.minutes)}:${pad2(bd.seconds)}`;
+  if (bd.years > 0) return `${bd.years}y ${bd.months}mo ${bd.days}d ${time}`;
+  if (bd.months > 0) return `${bd.months}mo ${bd.days}d ${time}`;
+  if (bd.days > 0) return `${bd.days}d ${time}`;
+  return time;
+}
+
+/**
+ * % フォーマット。極小値も視認できるよう桁数を可変にする:
+ *  ratio < 0.001 → "0.0X%"
+ *  < 0.1        → "X.X%"
+ *  >= 0.1       → "X%" (整数)
+ */
+function formatPct(ratio: number): string {
+  const p = ratio * 100;
+  if (p < 0.1 && p > 0) return `${p.toFixed(2)}%`;
+  if (p < 10) return `${p.toFixed(1)}%`;
+  return `${Math.round(p)}%`;
 }
 
 function formatJstWall(ms: number): string {

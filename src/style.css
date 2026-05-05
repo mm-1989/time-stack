@@ -533,11 +533,16 @@ body::after {
   transition: width 200ms ease;
 }
 .summary-prog-num {
-  width: 80px;
+  width: 110px;
   text-align: right;
   font-size: 12px;
   letter-spacing: 0.05em;
   color: #d6f5ff;
+}
+.summary-pct {
+  color: var(--tron-text-dim);
+  font-size: 11px;
+  margin-left: 2px;
 }
 
 /* AGGREGATE: 大きな数値の縦並び */
@@ -608,7 +613,8 @@ body::after {
     font-size: 12px;
   }
   .summary-prog-label { width: 44px; }
-  .summary-prog-num { width: 64px; font-size: 11px; }
+  .summary-prog-num { width: 88px; font-size: 11px; }
+  .summary-pct { font-size: 10px; }
   .summary-num-big { font-size: 16px; }
   .summary-unit { width: 50px; font-size: 10px; }
 }

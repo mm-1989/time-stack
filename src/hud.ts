@@ -1,7 +1,7 @@
 // 平面ビュー用 HUD: 経過時間 + 状態 + 操作ヒント。
 // 3D 砂時計版から、機能を簡素化しつつフェード演出は維持。
 
-import { formatJstClock } from './time';
+import { calendarBreakdown, formatJstClock } from './time';
 import { t } from './i18n';
 
 // 曜日 3 文字 (TRON aesthetic: 大文字英)。getDay() の 0=日 に揃える。
@@ -76,22 +76,29 @@ export class Hud {
     this.scheduleHintHide();
   }
 
-  update(virtualMs: number, speed: number, frozen: boolean): void {
-    const totalSec = Math.floor(virtualMs / 1000);
-    const sec = totalSec % 60;
-    const min = Math.floor(totalSec / 60) % 60;
-    const hour = Math.floor(totalSec / 3600) % 24;
-    const day = Math.floor(totalSec / 86400);
+  update(virtualMs: number, speed: number, frozen: boolean, originStartMs: number): void {
+    // 暦差分: ?since=1990-04-15 で 36y 0mo 20d など。NOW モードは原則 1 日未満なので
+    // years/months は 0 になり、時刻のみが残る (graceful degradation)。
+    const bd = calendarBreakdown(originStartMs, virtualMs);
 
-    // 経過日 ≥ 1 のときのみ "Nd" を出す。1 日未満では時刻部分のみで密度を抑える。
-    const dayPart = day > 0
-      ? `<span class="d">${day}</span><span class="u">d</span> `
-      : '';
+    let prefix = '';
+    if (bd.years > 0) {
+      prefix =
+        `<span class="d">${bd.years}</span><span class="u">y</span> ` +
+        `<span class="d">${bd.months}</span><span class="u">mo</span> ` +
+        `<span class="d">${bd.days}</span><span class="u">d</span> `;
+    } else if (bd.months > 0) {
+      prefix =
+        `<span class="d">${bd.months}</span><span class="u">mo</span> ` +
+        `<span class="d">${bd.days}</span><span class="u">d</span> `;
+    } else if (bd.days > 0) {
+      prefix = `<span class="d">${bd.days}</span><span class="u">d</span> `;
+    }
     this.elapsedEl.innerHTML =
-      dayPart +
-      `<span class="d">${pad(hour)}</span><span class="sep">:</span>` +
-      `<span class="d">${pad(min)}</span><span class="sep">:</span>` +
-      `<span class="d">${pad(sec)}</span>`;
+      prefix +
+      `<span class="d">${pad(bd.hours)}</span><span class="sep">:</span>` +
+      `<span class="d">${pad(bd.minutes)}</span><span class="sep">:</span>` +
+      `<span class="d">${pad(bd.seconds)}</span>`;
     this.elapsedEl.classList.toggle('hud-frozen', frozen);
 
     const isRealtime = Math.abs(speed - 1) < 0.001;

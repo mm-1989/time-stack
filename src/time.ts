@@ -55,3 +55,50 @@ export function formatJstClock(nowUtcMs: number): string {
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
+
+/**
+ * 起点 (originMs, UTC ms) から virtualMs だけ進んだ時刻を、年/月/日/時/分/秒の
+ * 暦差分として返す。365.25 日割りの近似ではなく、実カレンダーで正確に計算する。
+ *
+ * ?since=1990-04-15 の人が 2026-05-05 時点で「36y 0mo 20d HH:MM:SS」と読めるように。
+ * 月の長さは 28〜31 日で動的に変わるため、virtualNow.getDate() を起点側と比較し
+ * 借入 (carry) を行う必要がある。
+ */
+export interface CalendarBreakdown {
+  years: number;
+  months: number;
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
+
+export function calendarBreakdown(
+  originMs: number,
+  virtualMs: number,
+): CalendarBreakdown {
+  if (virtualMs < 0) virtualMs = 0;
+  const start = new Date(originMs);
+  const end = new Date(originMs + virtualMs);
+
+  let years = end.getFullYear() - start.getFullYear();
+  let months = end.getMonth() - start.getMonth();
+  let days = end.getDate() - start.getDate();
+  let hours = end.getHours() - start.getHours();
+  let minutes = end.getMinutes() - start.getMinutes();
+  let seconds = end.getSeconds() - start.getSeconds();
+
+  // 下位から繰り下げ (秒 → 分 → 時 → 日 → 月 → 年)
+  if (seconds < 0) { seconds += 60; minutes -= 1; }
+  if (minutes < 0) { minutes += 60; hours -= 1; }
+  if (hours < 0) { hours += 24; days -= 1; }
+  if (days < 0) {
+    // 直前月の日数を借りる: end の前月末の日付
+    const prevMonthLastDay = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
+    days += prevMonthLastDay;
+    months -= 1;
+  }
+  if (months < 0) { months += 12; years -= 1; }
+
+  return { years, months, days, hours, minutes, seconds };
+}
