@@ -124,7 +124,9 @@ export class TimeGrid {
 
     const padX = W * 0.08;
     const padTop = H * 0.18;
-    const padBot = H * 0.18;
+    // モバイル幅では下部に scale-switch (固定 bottom:60px) があるので、canvas 進捗バー
+    // との重なりを避けるため padBot を増やす。デスクトップは従来通り。
+    const padBot = window.innerWidth <= 640 ? H * 0.22 : H * 0.18;
     const areaX = padX;
     const areaY = padTop;
     const areaW = W - padX * 2;
@@ -266,7 +268,9 @@ export class TimeGrid {
     // グリッド占有領域
     const padX = W * 0.08;
     const padTop = H * 0.18;
-    const padBot = H * 0.18;
+    // モバイル幅では下部に scale-switch (固定 bottom:60px) があるので、canvas 進捗バー
+    // との重なりを避けるため padBot を増やす。デスクトップは従来通り。
+    const padBot = window.innerWidth <= 640 ? H * 0.22 : H * 0.18;
     const areaX = padX;
     const areaY = padTop;
     const areaW = W - padX * 2;
