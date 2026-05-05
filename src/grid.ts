@@ -562,13 +562,14 @@ export class TimeGrid {
     const fillColor = opts.fillColor;
     const isCountdownMode = opts.countdownMode === true;
 
+    // countdown: drained (= 既に消えた時間) は完全非表示。残時間 (filled) と
+    // 進行中 (current) のみ描画して sand timer の「残量」だけを見せる。
+    if (isCountdownMode && !isFilled && !isCurrent) return;
+
     // TRON: 全マス共通で「線」が主役。塗りは控えめ、線の輝度で状態を表す。
-    // countdown では drained (= 過ぎた時間) を一段薄く、filled (= 残時間) を一段濃く
-    // して「残量」が一目で分かるように。
     if (!isFilled && !isCurrent && !isPreview) {
-      // 未塗マス: 細い線のみ。countdown では「過ぎた時間」なので半分以下の濃さに。
-      const drainedAlpha = isCountdownMode ? 0.08 : 0.20;
-      ctx.strokeStyle = `rgba(0, 245, 255, ${drainedAlpha})`;
+      // 未塗マス: 細い線のみ (累積モード)。
+      ctx.strokeStyle = 'rgba(0, 245, 255, 0.20)';
       ctx.lineWidth = 1 * this.dpr;
       roundRect(ctx, x, y, w, h, r);
       ctx.stroke();
