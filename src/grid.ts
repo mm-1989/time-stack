@@ -560,11 +560,15 @@ export class TimeGrid {
     const isCurrent = idx === intFilled;
     const isPreview = idx === intFilled + 1;
     const fillColor = opts.fillColor;
+    const isCountdownMode = opts.countdownMode === true;
 
     // TRON: 全マス共通で「線」が主役。塗りは控えめ、線の輝度で状態を表す。
+    // countdown では drained (= 過ぎた時間) を一段薄く、filled (= 残時間) を一段濃く
+    // して「残量」が一目で分かるように。
     if (!isFilled && !isCurrent && !isPreview) {
-      // 未塗マス: 細い線のみ。TRON のグリッド感を保つため枠線は確実に見える濃さに。
-      ctx.strokeStyle = 'rgba(0, 245, 255, 0.20)';
+      // 未塗マス: 細い線のみ。countdown では「過ぎた時間」なので半分以下の濃さに。
+      const drainedAlpha = isCountdownMode ? 0.08 : 0.20;
+      ctx.strokeStyle = `rgba(0, 245, 255, ${drainedAlpha})`;
       ctx.lineWidth = 1 * this.dpr;
       roundRect(ctx, x, y, w, h, r);
       ctx.stroke();
@@ -584,13 +588,14 @@ export class TimeGrid {
     }
 
     if (isFilled) {
-      // TRON 塗り済みマス: 内部はごく薄い fill + 強い線 + glow
+      // TRON 塗り済みマス: 内部は薄い fill + 強い線 + glow。
+      // countdown では fill を強めて「残時間」を強調 (sand timer の sand 部分)。
       ctx.save();
-      ctx.fillStyle = alphaCol(fillColor, 0.10);
+      ctx.fillStyle = alphaCol(fillColor, isCountdownMode ? 0.18 : 0.10);
       roundRect(ctx, x, y, w, h, r);
       ctx.fill();
       ctx.shadowColor = fillColor;
-      ctx.shadowBlur = 6 * this.dpr;
+      ctx.shadowBlur = (isCountdownMode ? 8 : 6) * this.dpr;
       ctx.strokeStyle = alphaCol(fillColor, 0.85);
       ctx.lineWidth = 1.2 * this.dpr;
       roundRect(ctx, x, y, w, h, r);

@@ -159,7 +159,9 @@ export class Hud {
 }
 
 function formatTargetDate(d: Date): string {
-  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
+  // 曜日 3 文字を末尾に添えて目標日の感覚を補強
+  const wd = WEEKDAY[d.getDay()];
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${wd}`;
 }
 
 function pad(n: number): string {
