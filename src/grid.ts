@@ -128,11 +128,11 @@ export class TimeGrid {
     // bottom) と進捗バー (CSS bottom 130px に固定) との位置関係を保つため、padBot を
     // 「H*0.18 以上 かつ canvas で CSS 145px 以上」とする。短い画面 (iPhone SE 等) で
     // cells が進捗バーまで降りてくるのを防ぐ。デスクトップは比例値そのまま。
-    // 進行中マスの直下に "Nh / Nm / Ns / Nd / NM" ラベルが描画され (boost 時は
-     // 通常より下に伸びる)、進捗バー (CSS bottom 130) に被るのを防ぐため、padBot を
-     // CSS 175px 以上に確保する。これで label bottom と bar の間に 20px 以上の余白。
+    // モバイル幅では下部 scale-switch (CSS bottom:60px、pill 高 ~30px = top 90px
+     // from bottom) と進行中マスの直下ラベル (boost で 5px 下に伸びる) が干渉しないよう、
+     // padBot に CSS 130px 以上を確保する。デスクトップは比例値そのまま。
     const padBot = window.innerWidth <= 640
-      ? Math.max(H * 0.18, 175 * this.dpr)
+      ? Math.max(H * 0.18, 130 * this.dpr)
       : H * 0.18;
     const areaX = padX;
     const areaY = padTop;
@@ -279,11 +279,11 @@ export class TimeGrid {
     // bottom) と進捗バー (CSS bottom 130px に固定) との位置関係を保つため、padBot を
     // 「H*0.18 以上 かつ canvas で CSS 145px 以上」とする。短い画面 (iPhone SE 等) で
     // cells が進捗バーまで降りてくるのを防ぐ。デスクトップは比例値そのまま。
-    // 進行中マスの直下に "Nh / Nm / Ns / Nd / NM" ラベルが描画され (boost 時は
-     // 通常より下に伸びる)、進捗バー (CSS bottom 130) に被るのを防ぐため、padBot を
-     // CSS 175px 以上に確保する。これで label bottom と bar の間に 20px 以上の余白。
+    // モバイル幅では下部 scale-switch (CSS bottom:60px、pill 高 ~30px = top 90px
+     // from bottom) と進行中マスの直下ラベル (boost で 5px 下に伸びる) が干渉しないよう、
+     // padBot に CSS 130px 以上を確保する。デスクトップは比例値そのまま。
     const padBot = window.innerWidth <= 640
-      ? Math.max(H * 0.18, 175 * this.dpr)
+      ? Math.max(H * 0.18, 130 * this.dpr)
       : H * 0.18;
     const areaX = padX;
     const areaY = padTop;
@@ -301,10 +301,8 @@ export class TimeGrid {
       this.renderGrid(this.opts, this.filled, areaX, areaY, areaW, areaH, now, 'idle');
     }
 
-    // 下部進捗バーは idle 時のみ
-    if (this.mode === 'idle') {
-      this.drawProgress(W, areaX, areaW, padBot, this.filled, this.opts);
-    }
+    // 下部進捗バーは廃止 (冗長 / SUMMARY と badge progress dot で同情報取得可能)。
+    void W; void areaX; void areaW; void padBot;
 
     // 時刻境界エフェクト (一番前面に重ねる)
     this.drawBoundaryEffects(W, H, now);
@@ -820,82 +818,6 @@ export class TimeGrid {
     ctx.restore();
   }
 
-  private drawProgress(
-    W: number, areaX: number, areaW: number, padBot: number,
-    filled: number, opts: GridOptions,
-  ): void {
-    const { ctx } = this;
-    const N = opts.count;
-    const color = opts.fillColor;
-    const barH = 1 * this.dpr;
-    // モバイル幅では下部に scale-switch (固定 bottom:60px、pill 高 ~30px = top edge
-    // 90px from bottom) があるため、進捗バー位置を CSS 130px from bottom に固定して
-    // pill との間に 20px 以上の安全な余白を作る。デスクトップは従来式 (padBot 比例)。
-    const y = window.innerWidth <= 640
-      ? this.canvas.height - 130 * this.dpr
-      : this.canvas.height - padBot * 0.55;
-    ctx.fillStyle = 'rgba(0, 245, 255, 0.08)';
-    ctx.fillRect(areaX, y, areaW, barH);
-    const ratio = filled / N;
-    ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 8 * this.dpr;
-    ctx.fillStyle = color;
-    ctx.fillRect(areaX, y, areaW * ratio, barH);
-    ctx.restore();
-    // テキスト: 自然語化 (scale ごとに単位付き)
-    const left = formatElapsed(filled, opts);
-    const right = `${(ratio * 100).toFixed(1)}% of ${cycleLabel(opts)}`;
-    ctx.fillStyle = 'rgba(0, 245, 255, 0.45)';
-    ctx.font = `500 ${10 * this.dpr}px "JetBrains Mono", ui-monospace, monospace`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(left, areaX, y + 10 * this.dpr);
-    // 右側 "% of HOUR" は SUMMARY (Σ) と冗長なのでモバイル幅では非表示にして
-    // bottom-right の sound / footer / 進捗テキスト の三重重なりを解消する。
-    const isMobileWidth = window.innerWidth <= 640;
-    if (!isMobileWidth) {
-      ctx.textAlign = 'right';
-      ctx.fillText(right, areaX + areaW, y + 10 * this.dpr);
-    }
-    void W;
-  }
-}
-
-/** 進捗バー左側: filled を「14H 36M ELAPSED」のような自然語に */
-function formatElapsed(filled: number, opts: GridOptions): string {
-  const unit = opts.unit;
-  const intF = Math.floor(filled);
-  const frac = filled - intF;
-  if (unit === 'M') {
-    // year scale: 月数 + 当月内日数
-    const subDays = Math.floor(frac * 30);
-    return `${intF}MO ${subDays}D ELAPSED`;
-  }
-  if (unit === 'd') {
-    // month scale: 日数 + 時刻フラクション
-    const subHours = Math.floor(frac * 24);
-    return `${intF}D ${subHours}H ELAPSED`;
-  }
-  if (unit === 'h') {
-    const subMin = Math.floor(frac * 60);
-    return `${intF}H ${subMin}M ELAPSED`;
-  }
-  if (unit === 'm') {
-    const subSec = Math.floor(frac * 60);
-    return `${intF}M ${subSec}S ELAPSED`;
-  }
-  return `${filled.toFixed(2)}S ELAPSED`;
-}
-
-/** 進捗バー右側: スケール名 (period の名前) */
-function cycleLabel(opts: GridOptions): string {
-  const unit = opts.unit;
-  if (unit === 'M') return 'YEAR';
-  if (unit === 'd') return 'MONTH';
-  if (unit === 'h') return 'DAY';
-  if (unit === 'm') return 'HOUR';
-  return 'MINUTE';
 }
 
 function roundRect(
