@@ -52,7 +52,9 @@ export function bindGestures(
     if (dt > maxDuration) return;
     if (Math.abs(dx) < threshold) return;
     if (Math.abs(dx) < Math.abs(dy) * ratio) return;
-    if (dx > 0) handlers.onSwipeNext?.();
+    // カルーセル慣習に揃える: 指を左へ動かす = 次が出てくる、右 = 前へ戻る。
+    // (iOS 写真アプリ / Instagram ストーリー / Tab swipe 等と同じ向き)
+    if (dx < 0) handlers.onSwipeNext?.();
     else handlers.onSwipePrev?.();
   });
 
