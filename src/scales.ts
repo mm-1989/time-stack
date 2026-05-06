@@ -50,10 +50,13 @@ export interface ResolveContext {
  * countdown total から natural scale を決定する純関数。
  * 「period >= total」を満たす最小 scale を返す (= 全期間が 1 サイクルにハマる粒度)。
  *
- *  - count = floor(total/msPerCell) が 5 未満になる scale は natural として採用しない。
- *    例: 31 日 countdown → year scale が period >= total を満たすが count=1 で
+ *  - count = ceil(total/msPerCell) が 5 未満になる scale は natural として採用しない。
+ *    例: 31 日 countdown → year scale が period >= total を満たすが count=2 で
  *    可視化として無意味なので natural なし、全 scale per-cycle にフォールバック。
  *  - total > 1 年 (どの scale も period < total) → null (natural なし)。
+ *  - ceil を使う理由: 小数部 (例 13.22 日) を partial leading-edge cell として
+ *    可視化するため。floor だと leading edge が cell 数の外に出て、sub-particles
+ *    の描画対象 (= current cell) がループ範囲外になる。
  */
 export function findCountdownNaturalScale(totalMs: number): ScaleId | null {
   if (totalMs <= 0) return null;
@@ -61,7 +64,7 @@ export function findCountdownNaturalScale(totalMs: number): ScaleId | null {
   for (const id of SCALE_ORDER) {
     const s = SCALES[id];
     if (s.periodMs >= totalMs) {
-      const count = Math.floor(totalMs / s.msPerCell);
+      const count = Math.ceil(totalMs / s.msPerCell);
       return count >= MIN_CELLS ? id : null;
     }
   }
@@ -257,8 +260,11 @@ export function nextUnlockedScale(
  *
  * countdown mode の挙動:
  *  - ctx.countdownNaturalScale === scale.id のとき: 「natural scale」扱い。
- *    count = floor(total / msPerCell)、filled = floor(remaining / msPerCell) で
+ *    count = ceil(total / msPerCell)、filled = remaining / msPerCell (小数あり) で
  *    countdown 全期間を 1 サイクル化。filled 反転は不要 (filled が既に「残量」)。
+ *    ceil を使う理由: total が cell 単位の整数倍でないとき (例 13.22 日)、小数
+ *    部を partial leading-edge cell として描画して sub-particles で drain 進行を
+ *    可視化するため。floor にすると count が小さすぎて current cell が範囲外。
  *  - 上記以外: 通常の resolve / filledFor 結果に対し filled を反転 (count - filled)。
  *    砂時計の per-cycle drain として表示 (per-cycle 残量)。
  */
@@ -276,7 +282,7 @@ export function snapshotScale(
     ctx.countdownRemainingMs != null &&
     scale.msPerCell > 0
   ) {
-    const count = Math.max(1, Math.floor(ctx.countdownTotalMs / scale.msPerCell));
+    const count = Math.max(1, Math.ceil(ctx.countdownTotalMs / scale.msPerCell));
     const filled = Math.max(0, Math.min(count, ctx.countdownRemainingMs / scale.msPerCell));
     return { count, filled };
   }

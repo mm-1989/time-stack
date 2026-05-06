@@ -313,18 +313,25 @@ describe('findCountdownNaturalScale', () => {
     expect(findCountdownNaturalScale(0)).toBe(null);
     expect(findCountdownNaturalScale(-1000)).toBe(null);
   });
-  // count < MIN_CELLS (=5) は無効
-  it('31 日 (year count=1 で MIN 未満) → null', () => {
+  // count < MIN_CELLS (=5) は無効。count は ceil で算出。
+  it('31 日 (year count=ceil(31/30)=2 で MIN 未満) → null', () => {
     expect(findCountdownNaturalScale(31 * 86_400_000)).toBe(null);
   });
-  it('100 日 (year count=3 で MIN 未満) → null', () => {
+  it('100 日 (year count=ceil(100/30)=4 で MIN 未満) → null', () => {
     expect(findCountdownNaturalScale(100 * 86_400_000)).toBe(null);
   });
   it('6 ヶ月 (year count=6 で MIN 以上) → year', () => {
     expect(findCountdownNaturalScale(180 * 86_400_000)).toBe('year');
   });
-  it('100 秒 (hour count=1 で MIN 未満) → null', () => {
+  it('100 秒 (hour count=ceil(100/60)=2 で MIN 未満) → null', () => {
     expect(findCountdownNaturalScale(100 * 1000)).toBe(null);
+  });
+  // ceil の効用: 小数 cell も leading-edge として活きる
+  it('4.5h (day count=ceil(4.5)=5 で MIN ぎりぎり pass) → day', () => {
+    expect(findCountdownNaturalScale(4.5 * 3_600_000)).toBe('day');
+  });
+  it('13.22 日 (month count=ceil(13.22)=14 で pass) → month', () => {
+    expect(findCountdownNaturalScale(13.22 * 86_400_000)).toBe('month');
   });
 });
 
@@ -401,5 +408,42 @@ describe('snapshotScale (countdown natural scale 上書き)', () => {
     // → countdown invert = 31 - 4.5 = 26.5
     expect(snap.count).toBe(31);
     expect(snap.filled).toBeCloseTo(26.5, 1);
+  });
+
+  // ceil で leading-edge cell を確保するケース (実際の不具合再現)
+  it('total=13.22d (非整数) → count=14、開始直後 filled=13.22 で leading edge が i=13', () => {
+    const total = 13.22 * 86_400_000;
+    const snap = snapshotScale(SCALES.month, 0, wallMs, ctxBase({
+      countdownTotalMs: total,
+      countdownRemainingMs: total,
+    }));
+    // ceil(13.22) = 14、partial cell が leading edge として確保される
+    expect(snap.count).toBe(14);
+    expect(snap.filled).toBeCloseTo(13.22, 2);
+    // intFilled = floor(13.22) = 13、grid loop で i=13 が isCurrent (range 内) になる
+    expect(Math.floor(snap.filled)).toBe(13);
+  });
+
+  it('total=13.22d、半分経過 → filled=6.61 で current cell が中段に移動', () => {
+    const total = 13.22 * 86_400_000;
+    const snap = snapshotScale(SCALES.month, 0, wallMs, ctxBase({
+      countdownTotalMs: total,
+      countdownRemainingMs: total / 2,
+    }));
+    expect(snap.count).toBe(14);
+    expect(snap.filled).toBeCloseTo(6.61, 2);
+  });
+
+  it('total=8h ぴったり (整数) → count=8、leading-edge は最後の 1 frame まで現れない', () => {
+    // 整数倍数: 開始時 filled=8 で intFilled=8=count、loop 範囲外のため
+    // 「全 cell isFilled、isCurrent なし」となるが 1 frame 後に解消する許容仕様
+    const total = 8 * 3_600_000;
+    const snap = snapshotScale(SCALES.day, 0, wallMs, ctxBase({
+      countdownTotalMs: total,
+      countdownRemainingMs: total,
+      countdownNaturalScale: 'day' as ScaleId,
+    }));
+    expect(snap.count).toBe(8);
+    expect(snap.filled).toBe(8);
   });
 });
