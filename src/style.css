@@ -42,6 +42,10 @@ canvas {
   height: 100%;
   will-change: transform;
   transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+  /* iOS Safari の edge-swipe 戻るナビ / Android Chrome の横 pan native gesture を抑止し、
+     横スワイプを完全にアプリ側で扱う。縦スクロールは body overflow:hidden で発生しないため
+     pan-y も不要だが、念のため許可しておくと iOS の rubber-band 等を温存できる。 */
+  touch-action: pan-y;
 }
 @media (prefers-reduced-motion: reduce) {
   .time-canvas {

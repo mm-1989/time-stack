@@ -41,6 +41,15 @@ export function bindGestures(
     startX = e.clientX;
     startY = e.clientY;
     startT = performance.now();
+    // pointer を target に固定する。指が overlay (Σ ボタン / sound indicator) や
+    // canvas 外へ流れても pointermove / pointerup は target に届くようになる。
+    // これがないと右スワイプ終端で右上 overlay に乗った瞬間 pointerup が他要素に行き、
+    // gesture が検出されない (= 「右スワイプが時々動作しない」現象の主因)。
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {
+      // 古いブラウザ等で setPointerCapture 非対応のときは握り潰す (劣化モード)
+    }
   });
 
   target.addEventListener('pointerup', (e) => {
@@ -58,9 +67,10 @@ export function bindGestures(
     else handlers.onSwipePrev?.();
   });
 
-  const cancel = (e: PointerEvent) => {
+  // システム割り込み (通話、システム gesture 横取り等) のみ cancel として扱う。
+  // pointerleave は使わない: 指が canvas 外に出ただけで gesture を殺すと、
+  // overlay や画面端に到達する正規スワイプも巻き添えで失敗する。
+  target.addEventListener('pointercancel', (e) => {
     if (e.pointerId === activeId) activeId = null;
-  };
-  target.addEventListener('pointercancel', cancel);
-  target.addEventListener('pointerleave', cancel);
+  });
 }
