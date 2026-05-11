@@ -30,9 +30,11 @@ origin (起点) のモードによって、month / year スケールの「サイ
 |---|---|---|---|---|
 | **NOW** | デフォルト or 起動画面 NOW 選択 | 累積 (0 → count) | 経過 (`HH:MM:SS`) | 「いま何時何分か」 |
 | **CUSTOM** | `?since=YYYY-MM-DD` | 累積 (anniversary 起点) | 経過累積 (`Ny Mmo Wd HH:MM:SS`) | 「何年生きたか」 |
-| **COUNTDOWN** | `?until=YYYY-MM-DD` | **drain (count → 0、砂時計)** | 残時間プロミネント (`→ target · Nd Nh Nm Ns 残`) | **「残何日か」** |
+| **COUNTDOWN** | `?until=YYYY-MM-DD` | **drain (count → 0、砂時計)** | 2 行構成: 上に `→ target (曜日)` 小、下に残時間大 | **「残何日か」** |
 
 countdown は **砂時計パラダイム**: page load 時刻 = T0、target = 0 cells。時間経過と共にすべてのスケールで cells が削れていく。HUD の経過時間表示は隠れ、残時間が主役に。SUMMARY も `REMAINING` ラベル + `TOTAL REMAINING` セクションで残時間ベースに切り替わる。
+
+さらに **natural scale 算出**: 残時間に対し「1 周期 ≥ 全期間 かつ 5 マス以上」を満たす最小スケールを自動選定し、それより大きい (= 全期間が 1 マス未満になってしまう) スケールはバッジを **ロック**。砂時計の cell 単位が直感に合うように制御する。残量が削れていくと、ロック解除しても粒度が荒すぎないスケールだけが選べる状態を維持する。drain で空になったマスは完全に消える ("既に消えた" ノイズ排除)。
 
 ### 例: `?since=1990-04-15` の場合
 
@@ -119,7 +121,7 @@ ESC / 背景タップ / × で閉じます。
 - **Vite 6** + TypeScript 5.6
 - **Canvas 2D** (Three.js 不使用、bundle ~50KB / gzip ~17KB)
 - **PWA**: manifest + Service Worker (Stale-While-Revalidate + precache + ナビゲーションフォールバック + 更新トースト)
-- **vitest** で純粋ロジック (スケール計算、暦境界、巡回、anniversary 算出) の単体テスト 75 ケース
+- **vitest** で純粋ロジック (スケール計算、暦境界、巡回、anniversary 算出、countdown 残時間表示) の単体テスト 124 ケース
 - **GitHub Pages** 配信、`base: /time-stack/` 固定
 - **GitHub Actions** で deploy + Playwright 自動キャプチャ → `screenshots` ブランチ
 
@@ -155,7 +157,7 @@ npm run capture:local     # Playwright で localhost をキャプチャ
 - 経過時間 (calendar diff for `?since=` users): `Ny Mmo (Ww) Dd HH:MM:SS` の階段表示。経過 2 年未満で累計週数を併記
 - 速度倍率 (`実時間` or `×N`)
 - 壁時計 (曜日 + JST 時刻、常時表示)
-- countdown モードでは目標日までの残時間表示
+- countdown モードでは目標日 (曜日付き) と残時間を 2 行構成で表示 (残時間プロミネント)
 - 操作ヒント (6 秒で自動フェード、再操作で復帰)
 
 ### 入力
@@ -191,6 +193,10 @@ npm run capture:local     # Playwright で localhost をキャプチャ
 - `prefers-reduced-motion` でアニメ短縮
 - 全シーン要素はキーボードと screen reader で到達可能
 
+## 位置づけ
+
+個人プロジェクト。業務外の自主制作で、Canvas 2D / PWA / 純関数テスト駆動などの実装パターンを実験する場として運用しています。社内共有はあくまで参考用で、業務システムではありません。
+
 ## ライセンス
 
-MIT (個人ポートフォリオ作品)
+MIT
