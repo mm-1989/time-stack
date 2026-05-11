@@ -26,10 +26,6 @@ export class InitScreen {
             <span class="init-opt-label">${t('init.custom.label')}</span>
             <span class="init-opt-sub">${t('init.custom.sub')}</span>
           </button>
-          <button class="init-opt" data-opt="countdown" type="button">
-            <span class="init-opt-label">${t('init.countdown.label')}</span>
-            <span class="init-opt-sub">${t('init.countdown.sub')}</span>
-          </button>
         </div>
         <div class="init-custom-input hidden">
           <input type="datetime-local" class="init-date" />
@@ -45,27 +41,26 @@ export class InitScreen {
     const opts = this.root.querySelectorAll<HTMLButtonElement>('.init-opt');
     const customInput = this.root.querySelector<HTMLDivElement>('.init-custom-input')!;
     const dateInput = this.root.querySelector<HTMLInputElement>('.init-date')!;
-    let selected: 'now' | 'custom' | 'countdown' = 'now';
+    let selected: 'now' | 'custom' = 'now';
     const pad = (n: number) => String(n).padStart(2, '0');
 
-    const setDateDefault = (mode: 'custom' | 'countdown') => {
-      // CUSTOM: 1 年前の今日 / COUNTDOWN: 30 日後
-      const t = mode === 'custom' ? Date.now() - 365 * 86_400_000 : Date.now() + 30 * 86_400_000;
-      const d = new Date(t);
+    const setDateDefault = () => {
+      // CUSTOM デフォルト: 1 年前の今日
+      const d = new Date(Date.now() - 365 * 86_400_000);
       dateInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00`;
     };
-    setDateDefault('custom');
+    setDateDefault();
 
     opts.forEach((btn) => {
       btn.addEventListener('click', () => {
         opts.forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        selected = btn.dataset.opt as 'now' | 'custom' | 'countdown';
+        selected = btn.dataset.opt as 'now' | 'custom';
         if (selected === 'now') {
           customInput.classList.add('hidden');
         } else {
           customInput.classList.remove('hidden');
-          setDateDefault(selected);
+          setDateDefault();
         }
       });
     });
@@ -76,10 +71,6 @@ export class InitScreen {
         const d = new Date(dateInput.value);
         if (isNaN(d.getTime())) return;
         origin = { mode: 'custom', date: d };
-      } else if (selected === 'countdown') {
-        const d = new Date(dateInput.value);
-        if (isNaN(d.getTime())) return;
-        origin = { mode: 'countdown', date: d };
       } else {
         origin = { mode: 'now' };
       }
