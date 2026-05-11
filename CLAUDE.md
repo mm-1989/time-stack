@@ -1,4 +1,4 @@
-# time-stack 開発ガイド (Claude 用)
+# time-stack 開発ガイド
 
 README.md にユーザ向けの仕様 (UI / 起点モード / URL クエリ) は揃っているので、ここでは **コード上の責務分離** と **作業の進め方 (チェックフロー / 罠)** に絞る。
 
@@ -33,7 +33,7 @@ npm test            # vitest run (純関数の単体テスト)
 npm run build       # 本番ビルド
 ```
 
-加えて **新しい純粋関数には単体テストを必ず追加** する (ユーザ要件、2026-05-06 確認)。表示関数も対象 (例: `formatCountdownRemain`)。pure に切り出してテストする方針。
+加えて **新しい純粋関数には単体テストを必ず追加** する。表示関数も対象 (例: `formatCountdownRemain`)。pure に切り出してテストする方針。
 
 UI 変更を伴う場合は **GitHub Actions のスクリーンショットキャプチャ** で目視確認する。`scripts/capture.mjs` の SCENARIOS にシーンを足し、main push 後に `screenshots` ブランチを `git fetch + reset --hard` で取り込む。ローカル目視は `npm run capture:local` でも可。音声 (WAV) はユーザ指定時のみ (commit メッセージに `[audio]` タグ or workflow_dispatch)。
 
@@ -47,23 +47,18 @@ UI 変更を伴う場合は **GitHub Actions のスクリーンショットキ�
 
 ## 罠と対処
 
-- **WSL2 で Vite を勝手に restart しない**。pkill → 再起動で localhost forwarding が壊れて `wsl --shutdown` が必要になる。dev server の制御はユーザに任せる
+- **WSL2 では Vite の再起動に注意**。pkill 経由で再起動すると localhost forwarding が壊れて `wsl --shutdown` が必要になる。dev server は基本起動しっぱなしで運用する
 - **Vite 8 ではなく Vite 6 固定**。Vite 8 + rolldown のネイティブバイナリで WSL の `npm install` がハング
 - **`grid.ts` の `drawCellRaw` は `renderGrid` のローカル変数を見れない**。`opts.countdownMode` のように options から読む
 
 ## Git 運用
 
-このプロジェクトに限り **`git push origin main` は都度承認なしで実行 OK** (グローバル CLAUDE.md の例外)。理由: クライアント完結 Three.js なし Canvas 2D の Web アプリで、機密情報が構造的に入る余地が無い。
+`git push origin main` は自由に実行してよい。クライアント完結の Canvas 2D Web アプリで、機密情報が構造的に入る余地がないため。
 
-ただし以下は依然個別承認が必要:
+ただし以下は事前に方針合意の上で行う:
 - `--force` / `-f` (force push)
 - `--no-verify` (フックスキップ)
 - main の削除・履歴改変
-- 他プロジェクトへの push
 - 将来 API キーが必要な機能 (KV / 認証など) を入れる場合は方針再評価
 
 commit は noreply email を使う。
-
-## 補足
-
-プロジェクト背景 (市場価値ポートフォリオ起点、Phase 履歴、自動キャプチャ運用詳細) は auto-memory `time_stack_project.md` にある。重複を避けるためここには書かない。
